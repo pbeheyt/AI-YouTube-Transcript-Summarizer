@@ -29,26 +29,17 @@ const extractChannelName = () => {
   return channelElement.textContent.trim();
 };
 
-// Extract video description
+// Extract video description from meta tag
 const extractVideoDescription = () => {
-  const descriptionElement = document.querySelector('ytd-text-inline-expander > yt-formatted-string');
-  return descriptionElement ? descriptionElement.textContent.trim() : 'Description not available';
+  const metaDescription = document.querySelector('meta[name="description"]');
+  return metaDescription ? metaDescription.getAttribute('content') : 'Description not available';
 };
 
-// Extract video metadata (views, date)
+// Placeholder function that returns default values instead of scraping metadata
 const extractVideoMetadata = () => {
-  const metadataElement = document.querySelector('#info-container ytd-video-primary-info-renderer #info');
-  if (!metadataElement) return { views: 'Unknown', date: 'Unknown' };
-  
-  const infoText = metadataElement.textContent.trim();
-  
-  // Try to extract views and date with regex
-  const viewsMatch = infoText.match(/(\d+,?\d*)\s+views?/i);
-  const dateMatch = infoText.match(/([A-Za-z]+\s+\d+,?\s*\d*)/);
-  
   return {
-    views: viewsMatch ? viewsMatch[1] : 'Unknown',
-    date: dateMatch ? dateMatch[1] : 'Unknown'
+    views: 'Not extracted',
+    date: 'Not extracted'
   };
 };
 

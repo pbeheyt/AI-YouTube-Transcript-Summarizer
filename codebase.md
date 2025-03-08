@@ -20,9 +20,9 @@
 {
   "claudeUrl": "https://claude.ai/new",
   "prompts": {
-    "academic": "# Machine d'Enseignement pour Transcriptions YouTube\n\n## RÔLE : Synthétiseur Éducatif Adaptatif\n\nVous êtes un expert en traitement de contenu éducatif spécialisé dans la transformation de transcriptions YouTube brutes en matériels d'apprentissage optimisés. Utilisant des cadres pédagogiques avancés.\n\n## CAPACITÉS\n\n1. **Analyse et Extraction de Contenu**\n   - Extraire les concepts clés, faits, théories et méthodologies des transcriptions\n   - Identifier la hiérarchie conceptuelle et la structure des connaissances\n   - Reconnaître l'approche et les méthodes d'enseignement de l'orateur\n   - Filtrer le contenu non pertinent, les mots de remplissage et les répétitions\n   - Signaler les inexactitudes potentielles ou les affirmations non étayées pour vérification\n\n2. **Restructuration Éducative**\n   - Organiser le contenu selon les meilleures pratiques éducatives\n   - Développer des objectifs d'apprentissage clairs basés sur le contenu\n   - Créer une progression logique des connaissances (fondamentales → avancées)\n   - Identifier et clarifier les points de confusion potentiels\n   - Décomposer des sujets complexes en unités d'apprentissage gérables\n\n3. **Adaptation au Style d'Apprentissage**\n   - S'adapter à différentes approches cognitives (analytique, pratique, créative)\n   - Personnaliser selon divers types d'intelligence (logique, linguistique, spatiale, etc.)\n   - Ajuster pour différentes capacités d'attention et vitesses de traitement\n   - Fournir des explications alternatives pour les concepts difficiles\n\n## PROCESSUS\n\n1. **Analyse d'Entrée**\n   - Examiner la transcription pour identifier le sujet, la portée, la complexité et la structure\n   - Déterminer le niveau éducatif et les connaissances préalables requises\n   - Évaluer l'approche pédagogique originale utilisée dans la vidéo\n   - Reconnaître les forces et les limites du matériel original\n   - Évaluer la qualité de la transcription et combler les lacunes ou ambiguïtés\n\n2. **Intégration du Profil de l'Apprenant**\n   - Prendre en compte les besoins, objectifs et préférences spécifiés par l'apprenant\n   - S'adapter à leur niveau de connaissance actuel et au contexte d'apprentissage\n   - Optimiser pour leur temps d'étude et leurs ressources disponibles\n   - Tenir compte des défis d'apprentissage spécifiques si mentionnés\n   - Aligner la complexité du contenu avec les capacités de charge cognitive\n\n3. **Transformation du Contenu**\n   - Réorganiser le matériel dans une structure éducative cohérente\n   - Simplifier les concepts complexes avec des analogies et des exemples\n   - Élaborer sur les points peu clairs ou insuffisamment expliqués\n   - Connecter les nouvelles informations aux cadres de connaissances établis\n   - Vérifier l'exactitude factuelle et noter toute affirmation nécessitant une enquête plus approfondie\n\n4. **Génération de Sortie**\n   - Créer un matériel d'apprentissage principal dans le format le plus approprié\n   - Développer des ressources supplémentaires pour le renforcement\n   - Inclure des éléments métacognitifs (invites de réflexion, auto-évaluation)\n   - Fournir des conseils pour une exploration et une application plus approfondies\n\n5. **Évaluation de la Qualité**\n   - Évaluer l'efficacité éducative des matériels générés\n   - Identifier les lacunes ou explications peu claires restantes\n   - Vérifier que les inexactitudes signalées sont correctement traitées\n   - S'assurer que tous les objectifs d'apprentissage sont adéquatement couverts\n\n## GESTION DE LA QUALITÉ DES TRANSCRIPTIONS\n\nLors du travail avec des transcriptions de qualité variable :\n\n1. **Pour les Transcriptions de Haute Qualité** : Procéder avec le processus standard, en se concentrant sur l'optimisation éducative.\n\n2. **Pour les Transcriptions Incomplètes** : \n   - Identifier les lacunes de connaissances et les noter explicitement\n   - Suggérer des ressources supplémentaires pour les informations manquantes\n   - Maintenir la cohérence en connectant logiquement le contenu disponible\n\n3. **Pour les Transcriptions Techniques/Complexes** :\n   - Décomposer la terminologie complexe avec des explications supplémentaires\n   - Utiliser des analogies simplifiées et des représentations visuelles\n   - Fournir un glossaire des termes techniques\n   - Créer des niveaux de complexité progressive pour différentes capacités d'apprentissage\n\n4. **Pour le Contenu Potentiellement Inexact** :\n   - Signaler les affirmations qui semblent douteuses ou non fondées\n   - Noter quand les déclarations sont en conflit avec les connaissances établies\n   - Suggérer des sources de vérification le cas échéant\n   - Distinguer entre les faits établis et les opinions du locuteur\n\n## STRUCTURE DE SORTIE\n\n1. **Objectifs d'Apprentissage** - Ce que vous apprendrez de ce matériel\n2. **Concepts Clés** - Idées essentielles présentées avec des explications claires\n3. **Carte Conceptuelle** - Représentation visuelle ASCII de la façon dont les idées se connectent\n4. **Analyse Détaillée** - Explication organisée du contenu\n5. **Résumé** - Revue concise des points les plus importants\n6. **Application** - Comment utiliser ces connaissances de façon pratique\n7. **Auto-Évaluation** - Questions pour vérifier la compréhension",
-    "shortSummary": "# YouTube Video Summary\n\nPlease provide a concise, clear summary of this YouTube video transcript. Your summary should:\n\n1. Capture the main points and key takeaways in 3-5 bullet points\n2. Be approximately 150-250 words total\n3. Maintain the original speaker's core message and intent\n4. Filter out filler words, repetitions, and tangential content\n5. Present information in a logical, easy-to-follow structure\n\nFocus on delivering maximum value and clarity in minimum space.",
-    "detailedSummary": "# Detailed YouTube Video Analysis\n\nPlease analyze this YouTube video transcript comprehensively. Your analysis should include:\n\n## 1. Executive Summary (100-150 words)\nA concise overview of the main topic and key points.\n\n## 2. Key Points\nThe 5-7 most important ideas or arguments presented, with brief explanations.\n\n## 3. Content Breakdown\nA section-by-section analysis of the video's content, organized by main topics.\n\n## 4. Notable Quotes\nThe most significant or insightful direct quotes from the transcript.\n\n## 5. Context & Background\nRelevant contextual information that helps understand the content better.\n\n## 6. Analysis & Insights\nYour interpretation of the content's significance, accuracy, and value.\n\n## 7. Potential Applications\nHow the information could be applied practically."
+    "academic": "# Machine d'Enseignement pour Transcriptions YouTube\n\n## RÔLE : Synthétiseur Éducatif Adaptatif\n\nVous êtes un expert en traitement de contenu éducatif spécialisé dans la transformation de transcriptions YouTube brutes en matériels d'apprentissage optimisés. Utilisant des cadres pédagogiques avancés.\n\n## CAPACITÉS\n\n1. **Analyse et Extraction de Contenu**\n   - Extraire les concepts clés, faits, théories et méthodologies des transcriptions\n   - Identifier la hiérarchie conceptuelle et la structure des connaissances\n   - Reconnaître l'approche et les méthodes d'enseignement de l'orateur\n   - Filtrer le contenu non pertinent, les mots de remplissage et les répétitions\n   - Signaler les inexactitudes potentielles ou les affirmations non étayées pour vérification\n\n2. **Restructuration Éducative**\n   - Organiser le contenu selon les meilleures pratiques éducatives\n   - Développer des objectifs d'apprentissage clairs basés sur le contenu\n   - Créer une progression logique des connaissances (fondamentales → avancées)\n   - Identifier et clarifier les points de confusion potentiels\n   - Décomposer des sujets complexes en unités d'apprentissage gérables\n\n3. **Adaptation au Style d'Apprentissage**\n   - S'adapter à différentes approches cognitives (analytique, pratique, créative)\n   - Personnaliser selon divers types d'intelligence (logique, linguistique, spatiale, etc.)\n   - Ajuster pour différentes capacités d'attention et vitesses de traitement\n   - Fournir des explications alternatives pour les concepts difficiles\n\n## PROCESSUS\n\n1. **Analyse d'Entrée**\n   - Examiner la transcription pour identifier le sujet, la portée, la complexité et la structure\n   - Déterminer le niveau éducatif et les connaissances préalables requises\n   - Évaluer l'approche pédagogique originale utilisée dans la vidéo\n   - Reconnaître les forces et les limites du matériel original\n   - Évaluer la qualité de la transcription et combler les lacunes ou ambiguïtés\n\n2. **Intégration du Profil de l'Apprenant**\n   - Prendre en compte les besoins, objectifs et préférences spécifiés par l'apprenant\n   - S'adapter à leur niveau de connaissance actuel et au contexte d'apprentissage\n   - Optimiser pour leur temps d'étude et leurs ressources disponibles\n   - Tenir compte des défis d'apprentissage spécifiques si mentionnés\n   - Aligner la complexité du contenu avec les capacités de charge cognitive\n\n3. **Transformation du Contenu**\n   - Réorganiser le matériel dans une structure éducative cohérente\n   - Simplifier les concepts complexes avec des analogies et des exemples\n   - Élaborer sur les points peu clairs ou insuffisamment expliqués\n   - Connecter les nouvelles informations aux cadres de connaissances établis\n   - Vérifier l'exactitude factuelle et noter toute affirmation nécessitant une enquête plus approfondie\n\n4. **Génération de Sortie**\n   - Créer un matériel d'apprentissage principal dans le format le plus approprié\n   - Développer des ressources supplémentaires pour le renforcement\n   - Inclure des éléments métacognitifs (invites de réflexion, auto-évaluation)\n   - Fournir des conseils pour une exploration et une application plus approfondies\n\n5. **Évaluation de la Qualité**\n   - Évaluer l'efficacité éducative des matériels générés\n   - Identifier les lacunes ou explications peu claires restantes\n   - Vérifier que les inexactitudes signalées sont correctement traitées\n   - S'assurer que tous les objectifs d'apprentissage sont adéquatement couverts\n\n## GESTION DE LA QUALITÉ DES TRANSCRIPTIONS\n\nLors du travail avec des transcriptions de qualité variable :\n\n1. **Pour les Transcriptions de Haute Qualité** : Procéder avec le processus standard, en se concentrant sur l'optimisation éducative.\n\n2. **Pour les Transcriptions Incomplètes** : \n   - Identifier les lacunes de connaissances et les noter explicitement\n   - Suggérer des ressources supplémentaires pour les informations manquantes\n   - Maintenir la cohérence en connectant logiquement le contenu disponible\n\n3. **Pour les Transcriptions Techniques/Complexes** :\n   - Décomposer la terminologie complexe avec des explications supplémentaires\n   - Utiliser des analogies simplifiées et des représentations visuelles\n   - Fournir un glossaire des termes techniques\n   - Créer des niveaux de complexité progressive pour différentes capacités d'apprentissage\n\n4. **Pour le Contenu Potentiellement Inexact** :\n   - Signaler les affirmations qui semblent douteuses ou non fondées\n   - Noter quand les déclarations sont en conflit avec les connaissances établies\n   - Suggérer des sources de vérification le cas échéant\n   - Distinguer entre les faits établis et les opinions du locuteur\n\n## STRUCTURE DE SORTIE\n\n1. **Objectifs d'Apprentissage** - Ce que vous apprendrez de ce matériel\n2. **Concepts Clés** - Idées essentielles présentées avec des explications claires\n3. **Carte Conceptuelle** - Représentation visuelle ASCII de la façon dont les idées se connectent\n4. **Analyse Détaillée** - Explication organisée du contenu\n5. **Résumé** - Revue concise des points les plus importants\n6. **Application** - Comment utiliser ces connaissances de façon pratique\n7. **Auto-Évaluation** - Questions pour vérifier la compréhension\n\nRemarque : Toutes les sorties doivent être en français.",
+    "shortSummary": "# Résumé de Vidéo YouTube\n\nVeuillez fournir un résumé concis et clair de cette transcription de vidéo YouTube. Votre résumé devrait :\n\n1. Capturer les points principaux et les enseignements clés en 3-5 points\n2. Comprendre environ 150-250 mots au total\n3. Maintenir le message principal et l'intention de l'orateur original\n4. Filtrer les mots de remplissage, les répétitions et le contenu tangentiel\n5. Présenter les informations dans une structure logique et facile à suivre\n\nConcentrez-vous sur la délivrance d'une valeur et d'une clarté maximales dans un espace minimal.\n\nRemarque : Le résumé doit être en français.",
+    "detailedSummary": "# Analyse Détaillée de Vidéo YouTube\n\nVeuillez analyser cette transcription de vidéo YouTube de manière complète. Votre analyse doit inclure :\n\n## 1. Résumé Exécutif (100-150 mots)\nUn aperçu concis du sujet principal et des points clés.\n\n## 2. Points Essentiels\nLes 5-7 idées ou arguments les plus importants présentés, avec de brèves explications.\n\n## 3. Décomposition du Contenu\nUne analyse section par section du contenu de la vidéo, organisée par sujets principaux.\n\n## 4. Citations Notables\nLes citations directes les plus significatives ou perspicaces de la transcription.\n\n## 5. Contexte & Arrière-plan\nInformations contextuelles pertinentes qui aident à mieux comprendre le contenu.\n\n## 6. Analyse & Perspectives\nVotre interprétation de l'importance, de l'exactitude et de la valeur du contenu.\n\n## 7. Applications Potentielles\nComment l'information pourrait être appliquée de manière pratique.\n\nRemarque : L'analyse doit être entièrement en français."
   }
 }
 ```
@@ -50,7 +50,8 @@ This is a binary file of the type: Image
     "contextMenus",
     "activeTab",
     "scripting",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "https://*.youtube.com/*",
@@ -310,6 +311,54 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
 });
 
+// Helper function to check if a content script is loaded
+const isContentScriptLoaded = async (tabId) => {
+  return new Promise((resolve) => {
+    try {
+      chrome.tabs.sendMessage(tabId, { action: 'ping' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.log('Content script not ready:', chrome.runtime.lastError);
+          resolve(false);
+        } else {
+          console.log('Content script is ready, received:', response);
+          resolve(true);
+        }
+      });
+    } catch (error) {
+      console.error('Error checking content script:', error);
+      resolve(false);
+    }
+  });
+};
+
+// Helper function to inject content script if needed
+const injectContentScriptIfNeeded = async (tabId) => {
+  try {
+    console.log('Checking if content script is loaded in tab', tabId);
+    
+    // Check if content script is already loaded
+    const isLoaded = await isContentScriptLoaded(tabId);
+    
+    if (!isLoaded) {
+      console.log('Content script not loaded, injecting...');
+      await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: ['dist/youtube-content.bundle.js']
+      });
+      
+      // Wait a moment for script to initialize
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return true;
+    } else {
+      console.log('Content script already loaded');
+      return true;
+    }
+  } catch (error) {
+    console.error('Error injecting content script:', error);
+    return false;
+  }
+};
+
 // Add context menu for YouTube videos
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
@@ -324,6 +373,14 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'summarizeYouTubeVideo') {
     try {
+      // Make sure content script is loaded
+      const injected = await injectContentScriptIfNeeded(tab.id);
+      
+      if (!injected) {
+        console.error('Failed to inject content script');
+        return;
+      }
+      
       // Clear any previous transcript data first
       const settingsToKeep = await chrome.storage.local.get(['selectedPromptType']);
       
@@ -336,7 +393,13 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       console.log('Cleared previous data, preserved settings:', settingsToKeep);
       
       // Send message to content script to extract transcript
-      chrome.tabs.sendMessage(tab.id, { action: 'extractTranscript' });
+      chrome.tabs.sendMessage(tab.id, { action: 'extractTranscript' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error sending message to content script:', chrome.runtime.lastError);
+          return;
+        }
+        console.log('Extract transcript command sent, response:', response);
+      });
       
       // Get settings
       const { selectedPromptType } = settingsToKeep;
@@ -351,18 +414,40 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       // Get the appropriate prompt based on selected type
       const prePrompt = config.prompts[selectedPromptType] || config.prompts.academic;
       
-      // Open Claude in new tab
-      const newTab = await chrome.tabs.create({ url: aiUrl, active: false });
+      // Wait for transcript extraction (with timeout)
+      let extractionSuccess = false;
+      let retryCount = 0;
+      const MAX_RETRIES = 15;
       
-      // Store necessary data for content script
-      await chrome.storage.local.set({
-        aiTabId: newTab.id,
-        scriptInjected: false,
-        prePrompt: prePrompt
-      });
+      while (!extractionSuccess && retryCount < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const { youtubeVideoData } = await chrome.storage.local.get(['youtubeVideoData']);
+        
+        if (youtubeVideoData) {
+          extractionSuccess = true;
+          
+          // Open Claude in new tab
+          const newTab = await chrome.tabs.create({ url: aiUrl, active: false });
+          
+          // Store necessary data for content script
+          await chrome.storage.local.set({
+            aiTabId: newTab.id,
+            scriptInjected: false,
+            prePrompt: prePrompt
+          });
+          
+          // Switch to the new tab
+          await chrome.tabs.update(newTab.id, { active: true });
+          break;
+        } else {
+          retryCount++;
+        }
+      }
       
-      // Switch to the new tab
-      await chrome.tabs.update(newTab.id, { active: true });
+      if (!extractionSuccess) {
+        console.error('Failed to extract transcript after multiple attempts');
+      }
     } catch (error) {
       console.error('Error during YouTube summarization:', error);
     }
@@ -556,12 +641,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.storage.local.set({ selectedPromptType: promptTypeSelect.value });
   });
   
+  // Helper function to check if the content script is accessible
+  const isContentScriptReady = (tabId) => {
+    return new Promise((resolve) => {
+      try {
+        chrome.tabs.sendMessage(tabId, { action: 'ping' }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.log('Content script not ready:', chrome.runtime.lastError);
+            resolve(false);
+          } else {
+            console.log('Content script is ready, received:', response);
+            resolve(true);
+          }
+        });
+      } catch (error) {
+        console.error('Error checking content script:', error);
+        resolve(false);
+      }
+    });
+  };
+
+  // Inject content script manually if needed
+  const injectContentScript = async (tabId) => {
+    try {
+      console.log('Attempting to inject content script manually...');
+      await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: ['dist/youtube-content.bundle.js']
+      });
+      return true;
+    } catch (error) {
+      console.error('Failed to inject content script:', error);
+      return false;
+    }
+  };
+  
   // Handle summarize button click
   summarizeBtn.addEventListener('click', async () => {
     try {
       // Check if we're on a YouTube video page
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      const currentTabUrl = tabs[0].url;
+      const currentTab = tabs[0];
+      const currentTabUrl = currentTab.url;
       
       if (!currentTabUrl.includes('youtube.com/watch')) {
         statusMessage.textContent = 'Not a YouTube video page. Please navigate to a video.';
@@ -569,16 +690,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       
-      statusMessage.textContent = 'Extracting transcript...';
+      statusMessage.textContent = 'Checking connection to page...';
       statusMessage.style.color = '#ccc';
       summarizeBtn.disabled = true;
       
+      // Check if content script is ready - try a few times
+      let contentScriptReady = await isContentScriptReady(currentTab.id);
+      
+      // If not ready, try to manually inject it
+      if (!contentScriptReady) {
+        statusMessage.textContent = 'Initializing transcript extractor...';
+        const injected = await injectContentScript(currentTab.id);
+        
+        // Wait a moment for the script to initialize
+        if (injected) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          contentScriptReady = await isContentScriptReady(currentTab.id);
+        }
+      }
+      
+      if (!contentScriptReady) {
+        statusMessage.textContent = 'Failed to connect to YouTube page. Please refresh the page and try again.';
+        statusMessage.style.color = '#ff6b6b';
+        summarizeBtn.disabled = false;
+        return;
+      }
+      
+      // Proceed with transcript extraction
+      statusMessage.textContent = 'Extracting transcript...';
+      
       // Always use Claude
-      const useClaudeAI = true;
       const selectedPromptType = promptTypeSelect.value;
       
       // Save settings but clear old transcript data
-      // This is the key fix - we preserve only the settings
       const settingsToKeep = { 
         selectedPromptType
       };
@@ -588,12 +732,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       await chrome.storage.local.set(settingsToKeep);
       
       // Send message to content script to extract transcript
-      chrome.tabs.sendMessage(tabs[0].id, { action: 'extractTranscript' });
+      chrome.tabs.sendMessage(currentTab.id, { action: 'extractTranscript' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error sending extractTranscript command:', chrome.runtime.lastError);
+          statusMessage.textContent = 'Communication error. Please refresh the page and try again.';
+          statusMessage.style.color = '#ff6b6b';
+          summarizeBtn.disabled = false;
+          return;
+        }
+        
+        console.log('Extract transcript command sent, response:', response);
+      });
       
       // Wait for transcript extraction (with timeout)
       let extractionSuccess = false;
       let retryCount = 0;
-      const MAX_RETRIES = 15; // Increased retry count for API method
+      const MAX_RETRIES = 15;
       
       while (!extractionSuccess && retryCount < MAX_RETRIES) {
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -687,6 +841,9 @@ const { YoutubeTranscript } = require('youtube-transcript');
  * Uses the youtube-transcript npm package for reliable transcript extraction
  */
 
+// Flag to indicate script is fully loaded
+let contentScriptReady = false;
+
 // Extract video title
 const extractVideoTitle = () => {
   const titleElement = document.querySelector('h1.ytd-watch-metadata');
@@ -695,30 +852,29 @@ const extractVideoTitle = () => {
 
 // Extract video creator/channel name
 const extractChannelName = () => {
-  const channelElement = document.querySelector('ytd-channel-name yt-formatted-string#text');
-  return channelElement ? channelElement.textContent.trim() : 'Channel not found';
+  // Updated selector to find channel name in the correct location
+  const channelElement = document.querySelector('#header-text #title.ytd-video-description-infocards-section-renderer');
+  
+  // Fallback to original selector if the new one doesn't work
+  if (!channelElement) {
+    const originalChannelElement = document.querySelector('ytd-channel-name yt-formatted-string#text');
+    return originalChannelElement ? originalChannelElement.textContent.trim() : 'Channel not found';
+  }
+  
+  return channelElement.textContent.trim();
 };
 
-// Extract video description
+// Extract video description from meta tag
 const extractVideoDescription = () => {
-  const descriptionElement = document.querySelector('ytd-text-inline-expander > yt-formatted-string');
-  return descriptionElement ? descriptionElement.textContent.trim() : 'Description not available';
+  const metaDescription = document.querySelector('meta[name="description"]');
+  return metaDescription ? metaDescription.getAttribute('content') : 'Description not available';
 };
 
-// Extract video metadata (views, date)
+// Placeholder function that returns default values instead of scraping metadata
 const extractVideoMetadata = () => {
-  const metadataElement = document.querySelector('#info-container ytd-video-primary-info-renderer #info');
-  if (!metadataElement) return { views: 'Unknown', date: 'Unknown' };
-  
-  const infoText = metadataElement.textContent.trim();
-  
-  // Try to extract views and date with regex
-  const viewsMatch = infoText.match(/(\d+,?\d*)\s+views?/i);
-  const dateMatch = infoText.match(/([A-Za-z]+\s+\d+,?\s*\d*)/);
-  
   return {
-    views: viewsMatch ? viewsMatch[1] : 'Unknown',
-    date: dateMatch ? dateMatch[1] : 'Unknown'
+    views: 'Not extracted',
+    date: 'Not extracted'
   };
 };
 
@@ -828,16 +984,6 @@ const clearExistingTranscriptData = async () => {
   });
 };
 
-// Handle messages from popup and background scripts
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'extractTranscript') {
-    // Start the extraction process
-    extractAndSaveVideoData();
-    sendResponse({ status: 'Extracting transcript...' });
-    return true; // Keep the message channel open for async response
-  }
-});
-
 // Function to extract and save video data
 const extractAndSaveVideoData = async () => {
   try {
@@ -886,15 +1032,51 @@ const extractAndSaveVideoData = async () => {
   });
 };
 
+// Handle messages from popup and background scripts
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log('Message received in content script:', message);
+  
+  // Respond to ping messages to verify content script is loaded
+  if (message.action === 'ping') {
+    console.log('Ping received, responding with pong');
+    sendResponse({ status: 'pong', ready: contentScriptReady });
+    return true; // Keep the message channel open for async response
+  }
+  
+  if (message.action === 'extractTranscript') {
+    console.log('Extract transcript request received');
+    // Start the extraction process
+    extractAndSaveVideoData();
+    sendResponse({ status: 'Extracting transcript...' });
+    return true; // Keep the message channel open for async response
+  }
+});
+
+// Initialize and mark as ready when loaded
+const initialize = async () => {
+  try {
+    console.log('YouTube transcript extractor content script initializing...');
+    
+    // Mark script as ready
+    contentScriptReady = true;
+    console.log('YouTube transcript extractor content script ready');
+    
+    // If on a YouTube video page, pre-extract the transcript
+    if (window.location.href.includes('youtube.com/watch')) {
+      console.log('YouTube video page detected, preparing for transcript extraction');
+      // Wait a bit for the page to stabilize
+      setTimeout(extractAndSaveVideoData, 1500);
+    }
+  } catch (error) {
+    console.error('Error initializing content script:', error);
+  }
+};
+
 // Log when content script loads
 console.log('YouTube transcript extractor content script loaded');
 
-// Automatically extract transcript when the page loads (for context menu functionality)
-if (window.location.href.includes('youtube.com/watch')) {
-  console.log('YouTube video page detected, preparing for transcript extraction');
-  // Wait a bit for the page to stabilize
-  setTimeout(extractAndSaveVideoData, 1500);
-}
+// Initialize the content script
+initialize();
 ```
 
 # webpack.config.js
