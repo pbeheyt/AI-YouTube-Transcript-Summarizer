@@ -75,15 +75,11 @@
         const title = data.videoTitle || 'No title available';
         const channel = data.channelName || 'Unknown channel';
         const description = data.videoDescription || 'No description available';
-        const views = data.views || 'Unknown';
-        const date = data.publishDate || 'Unknown date';
         const transcript = data.transcript || 'No transcript available';
         
         return `YouTube Video Information:
   Title: ${title}
   Channel: ${channel}
-  Views: ${views}
-  Published: ${date}
   
   Description:
   ${description}

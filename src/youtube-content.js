@@ -35,14 +35,6 @@ const extractVideoDescription = () => {
   return metaDescription ? metaDescription.getAttribute('content') : 'Description not available';
 };
 
-// Placeholder function that returns default values instead of scraping metadata
-const extractVideoMetadata = () => {
-  return {
-    views: 'Not extracted',
-    date: 'Not extracted'
-  };
-};
-
 // Format transcript data into a continuous text without timestamps
 const formatTranscript = (transcriptData) => {
   if (!Array.isArray(transcriptData) || transcriptData.length === 0) {
@@ -62,7 +54,6 @@ const extractVideoData = async () => {
     const title = extractVideoTitle();
     const channel = extractChannelName();
     const description = extractVideoDescription();
-    const metadata = extractVideoMetadata();
     
     // Get the current video URL with any parameters
     const fullVideoUrl = window.location.href;
@@ -88,8 +79,6 @@ const extractVideoData = async () => {
       videoTitle: title,
       channelName: channel,
       videoDescription: description,
-      views: metadata.views,
-      publishDate: metadata.date,
       transcript: formattedTranscript,
       transcriptLanguage: transcriptData.length > 0 ? transcriptData[0].lang : 'unknown',
       extractedAt: new Date().toISOString() // Add timestamp for debugging
@@ -118,8 +107,6 @@ const extractVideoData = async () => {
       videoTitle: extractVideoTitle(),
       channelName: extractChannelName(),
       videoDescription: extractVideoDescription(),
-      views: extractVideoMetadata().views,
-      publishDate: extractVideoMetadata().date,
       transcript: errorMessage,
       error: true,
       message: errorMessage,
