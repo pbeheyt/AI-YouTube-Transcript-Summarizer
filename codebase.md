@@ -1,283 +1,3 @@
-# background.js
-
-```js
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.url) {
-    try {
-      const response = await fetch(chrome.runtime.getURL('config.json'));
-      const config = await response.json();
-      const result = await chrome.storage.local.get(['aiTabId', 'scriptInjected', 'useClaudeAI']);
-      
-      // Debug logs moved after result is defined
-      console.log('Tab updated:', tab.url);
-      console.log('Checking tab:', tabId, 'against aiTabId:', result.aiTabId);
-      console.log('URL includes claude.ai:', tab.url.includes('claude.ai'));
-      
-      if (
-        tabId === result.aiTabId && 
-        !result.scriptInjected && 
-        ((result.useClaudeAI && tab.url.includes('claude.ai')) || 
-         (!result.useClaudeAI && tab.url.includes('chatgpt.com')))
-      ) {
-        console.log('Attempting to inject script:', result.useClaudeAI ? 'claude-content.js' : 'gpt-content.js');
-        try {
-          await chrome.scripting.executeScript({
-            target: { tabId: tabId },
-            files: [result.useClaudeAI ? 'claude-content.js' : 'gpt-content.js']
-          });
-          console.log('✅ Script injection successful');
-          await chrome.storage.local.set({ scriptInjected: true });
-        } catch (error) {
-          console.error('❌ Script injection failed:', error);
-        }
-      }
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  }
-});
-
-chrome.runtime.onInstalled.addListener(async () => {
-  // Initialize default settings if not already set
-  const defaultSettings = {
-    useClaudeAI: true,
-    selectedPromptType: 'academic'
-  };
-  
-  const result = await chrome.storage.local.get(Object.keys(defaultSettings));
-  
-  // Apply default settings for any missing values
-  const settingsToUpdate = {};
-  for (const [key, defaultValue] of Object.entries(defaultSettings)) {
-    if (result[key] === undefined) {
-      settingsToUpdate[key] = defaultValue;
-    }
-  }
-  
-  if (Object.keys(settingsToUpdate).length > 0) {
-    await chrome.storage.local.set(settingsToUpdate);
-  }
-});
-
-// Add context menu for YouTube videos
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: 'summarizeYouTubeVideo',
-    title: 'Summarize this YouTube Video',
-    contexts: ['page'],
-    documentUrlPatterns: ['*://*.youtube.com/watch?*']
-  });
-});
-
-// Handle context menu clicks
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId === 'summarizeYouTubeVideo') {
-    try {
-      // Send message to content script to extract transcript
-      chrome.tabs.sendMessage(tab.id, { action: 'extractTranscript' });
-      
-      // Get settings
-      const { useClaudeAI, selectedPromptType } = await chrome.storage.local.get(['useClaudeAI', 'selectedPromptType']);
-      
-      // Get config
-      const response = await fetch(chrome.runtime.getURL('config.json'));
-      const config = await response.json();
-      
-      // Clear previous data but keep settings
-      const currentSettings = await chrome.storage.local.get(['useClaudeAI', 'selectedPromptType']);
-      await chrome.storage.local.clear();
-      await chrome.storage.local.set(currentSettings);
-      
-      // Get URL for selected AI service
-      const aiUrl = useClaudeAI ? config.claudeUrl : config.chatgptUrl;
-      
-      // Get the appropriate prompt based on selected type
-      const prePrompt = config.prompts[selectedPromptType] || config.prompts.academic;
-      
-      // Open AI service in new tab
-      const newTab = await chrome.tabs.create({ url: aiUrl, active: false });
-      
-      // Store necessary data for content script
-      await chrome.storage.local.set({
-        aiTabId: newTab.id,
-        scriptInjected: false,
-        useClaudeAI: useClaudeAI,
-        prePrompt: prePrompt
-      });
-      
-      // Switch to the new tab
-      await chrome.tabs.update(newTab.id, { active: true });
-    } catch (error) {
-      console.error('Error during YouTube summarization:', error);
-    }
-  }
-});
-```
-
-# claude-content.js
-
-```js
-(() => {
-  function insertText(text) {
-      let editorElement = document.querySelector('p[data-placeholder="How can Claude help you today?"]');
-      
-      if (!editorElement) {
-          editorElement = document.querySelector('[contenteditable="true"]');
-      }
-      
-      if (!editorElement) {
-          console.error('Claude editor element not found');
-          return false;
-      }
-
-      // Clear existing content
-      editorElement.innerHTML = '';
-      
-      // Split the text into lines and create paragraphs
-      const lines = text.split('\n');
-      lines.forEach((line, index) => {
-          const p = document.createElement('p');
-          p.textContent = line;
-          editorElement.appendChild(p);
-          
-          // Add a line break between paragraphs
-          if (index < lines.length - 1) {
-              editorElement.appendChild(document.createElement('br'));
-          }
-      });
-
-      // Remove empty states
-      editorElement.classList.remove('is-empty', 'is-editor-empty');
-
-      // Trigger input event
-      const inputEvent = new Event('input', { bubbles: true });
-      editorElement.dispatchEvent(inputEvent);
-
-      // Find and click the send button with the new selector
-      setTimeout(() => {
-          // Try multiple possible button selectors
-          const sendButton = 
-              document.querySelector('button[aria-label="Send message"]') ||
-              document.querySelector('button[aria-label="Send Message"]') ||
-              document.querySelector('button svg path[d*="M208.49,120.49"]')?.closest('button');
-
-          if (sendButton) {
-              console.log('Send button found, clicking...');
-              
-              // Ensure the button is enabled
-              sendButton.disabled = false;
-              
-              // Create and dispatch multiple events for better compatibility
-              ['mousedown', 'mouseup', 'click'].forEach(eventType => {
-                  const event = new MouseEvent(eventType, {
-                      view: window,
-                      bubbles: true,
-                      cancelable: true,
-                      buttons: 1
-                  });
-                  sendButton.dispatchEvent(event);
-              });
-          } else {
-              console.error('Send button not found');
-          }
-      }, 1000); // Increased delay to ensure content is properly inserted
-
-      return true;
-  }
-
-  // Format YouTube video data
-  const formatYouTubeData = (data) => {
-      if (data.error) {
-          return `Error: ${data.message || 'Unknown error occurred while extracting YouTube data'}`;
-      }
-      
-      const title = data.videoTitle || 'No title available';
-      const channel = data.channelName || 'Unknown channel';
-      const description = data.videoDescription || 'No description available';
-      const views = data.views || 'Unknown';
-      const date = data.publishDate || 'Unknown date';
-      const transcript = data.transcript || 'No transcript available';
-      
-      return `YouTube Video Information:
-Title: ${title}
-Channel: ${channel}
-Views: ${views}
-Published: ${date}
-
-Description:
-${description}
-
-Transcript:
-${transcript}`;
-  };
-
-  const handleProcess = async () => {
-      try {
-          const result = await chrome.storage.local.get(['prePrompt', 'youtubeVideoData']);
-          
-          console.log('Retrieved data:', result);
-
-          if (!result.prePrompt) {
-              throw new Error('No prePrompt found in storage');
-          }
-
-          if (!result.youtubeVideoData) {
-              throw new Error('YouTube data missing from storage');
-          }
-
-          const youtubeContent = formatYouTubeData(result.youtubeVideoData);
-          const fullText = `${result.prePrompt}\n\n${youtubeContent}`;
-          
-          console.log('Attempting to insert text into Claude...');
-
-          const success = insertText(fullText);
-          
-          if (success) {
-              console.log('Message successfully inserted into Claude');
-          } else {
-              throw new Error('Failed to insert message into Claude');
-          }
-      } catch (error) {
-          console.error('Error in handling Claude process:', error);
-      }
-  };
-
-  // Initialize process when the page is ready
-  const observerConfig = { childList: true, subtree: true };
-  let retryCount = 0;
-  const MAX_RETRIES = 10;
-
-  const observer = new MutationObserver(() => {
-      const editorElement = document.querySelector('p[data-placeholder="How can Claude help you today?"]') || 
-                          document.querySelector('[contenteditable="true"]');
-      
-      if (editorElement) {
-          console.log('Claude editor element found');
-          observer.disconnect();
-          handleProcess();
-      } else {
-          retryCount++;
-          if (retryCount >= MAX_RETRIES) {
-              observer.disconnect();
-              console.error('Failed to find Claude editor element after maximum retries');
-          }
-      }
-  });
-
-  const startObserver = () => {
-      if (document.readyState === 'complete') {
-          observer.observe(document.body, observerConfig);
-      } else {
-          window.addEventListener('load', () => {
-              observer.observe(document.body, observerConfig);
-          });
-      }
-  };
-
-  startObserver();
-})();
-```
-
 # config.json
 
 ```json
@@ -292,150 +12,6 @@ ${transcript}`;
 }
 ```
 
-# gpt-content.js
-
-```js
-(() => {
-  function insertText(text) {
-      const editorDiv = document.querySelector('#prompt-textarea');
-      
-      if (!editorDiv) {
-          console.error('GPT editor div not found');
-          return false;
-      }
-
-      try {
-          // Set value to the text
-          editorDiv.value = text;
-          
-          // Focus the editor
-          editorDiv.focus();
-
-          // Dispatch input event
-          const inputEvent = new Event('input', { bubbles: true });
-          editorDiv.dispatchEvent(inputEvent);
-
-          // Find and click the send button
-          setTimeout(() => {
-              const sendButton = document.querySelector('button[data-testid="send-button"]:not(:disabled)');
-              if (sendButton) {
-                  console.log('Send button found, clicking...');
-                  
-                  // Create and dispatch multiple events for better compatibility
-                  ['mousedown', 'mouseup', 'click'].forEach(eventType => {
-                      const event = new MouseEvent(eventType, {
-                          view: window,
-                          bubbles: true,
-                          cancelable: true,
-                          buttons: 1
-                      });
-                      sendButton.dispatchEvent(event);
-                  });
-              } else {
-                  console.error('Send button not found or disabled');
-              }
-          }, 1000);
-
-          return true;
-      } catch (error) {
-          console.error('Error inserting text:', error);
-          return false;
-      }
-  }
-
-  // Format YouTube video data
-  const formatYouTubeData = (data) => {
-      if (data.error) {
-          return `Error: ${data.message || 'Unknown error occurred while extracting YouTube data'}`;
-      }
-      
-      const title = data.videoTitle || 'No title available';
-      const channel = data.channelName || 'Unknown channel';
-      const description = data.videoDescription || 'No description available';
-      const views = data.views || 'Unknown';
-      const date = data.publishDate || 'Unknown date';
-      const transcript = data.transcript || 'No transcript available';
-      
-      return `YouTube Video Information:
-Title: ${title}
-Channel: ${channel}
-Views: ${views}
-Published: ${date}
-
-Description:
-${description}
-
-Transcript:
-${transcript}`;
-  };
-
-  const handleProcess = async () => {
-      try {
-          // Get both prePrompt and YouTube data in a single storage call
-          const result = await chrome.storage.local.get(['prePrompt', 'youtubeVideoData']);
-          
-          console.log('Retrieved data for GPT:', result);
-
-          if (!result.prePrompt) {
-              throw new Error('No prePrompt found in storage');
-          }
-
-          if (!result.youtubeVideoData) {
-              throw new Error('YouTube data missing from storage');
-          }
-
-          const youtubeContent = formatYouTubeData(result.youtubeVideoData);
-          const fullText = `${result.prePrompt}\n\n${youtubeContent}`;
-          
-          console.log('Attempting to insert text into GPT...');
-
-          const success = insertText(fullText);
-          
-          if (success) {
-              console.log('Message successfully inserted into GPT');
-          } else {
-              throw new Error('Failed to insert message into GPT');
-          }
-      } catch (error) {
-          console.error('Error in handling GPT process:', error);
-      }
-  };
-
-  // Initialize process when the page is ready
-  const observerConfig = { childList: true, subtree: true };
-  let retryCount = 0;
-  const MAX_RETRIES = 10;
-
-  const observer = new MutationObserver(() => {
-      const editorDiv = document.querySelector('#prompt-textarea');
-      
-      if (editorDiv) {
-          console.log('GPT editor div found');
-          observer.disconnect();
-          handleProcess();
-      } else {
-          retryCount++;
-          if (retryCount >= MAX_RETRIES) {
-              observer.disconnect();
-              console.error('Failed to find GPT editor div after maximum retries');
-          }
-      }
-  });
-
-  const startObserver = () => {
-      if (document.readyState === 'complete') {
-          observer.observe(document.body, observerConfig);
-      } else {
-          window.addEventListener('load', () => {
-              observer.observe(document.body, observerConfig);
-          });
-      }
-  };
-
-  startObserver();
-})();
-```
-
 # images/icon16.png
 
 This is a binary file of the type: Image
@@ -447,192 +23,6 @@ This is a binary file of the type: Image
 # images/icon128.png
 
 This is a binary file of the type: Image
-
-# lib/youtube-transcript.js
-
-```js
-/**
- * YouTube Transcript API for Chrome Extensions
- * Adapted from https://github.com/Kakulukian/youtube-transcript
- */
-
-const RE_YOUTUBE = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
-const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36,gzip(gfe)';
-const RE_XML_TRANSCRIPT = /<text start="([^"]*)" dur="([^"]*)">([^<]*)<\/text>/g;
-
-class YoutubeTranscriptError extends Error {
-  constructor(message) {
-    super(`[YoutubeTranscript] 🚨 ${message}`);
-    this.name = 'YoutubeTranscriptError';
-  }
-}
-
-class YoutubeTranscriptTooManyRequestError extends YoutubeTranscriptError {
-  constructor() {
-    super('YouTube is receiving too many requests from this IP and now requires solving a captcha to continue');
-    this.name = 'YoutubeTranscriptTooManyRequestError';
-  }
-}
-
-class YoutubeTranscriptVideoUnavailableError extends YoutubeTranscriptError {
-  constructor(videoId) {
-    super(`The video is no longer available (${videoId})`);
-    this.name = 'YoutubeTranscriptVideoUnavailableError';
-  }
-}
-
-class YoutubeTranscriptDisabledError extends YoutubeTranscriptError {
-  constructor(videoId) {
-    super(`Transcript is disabled on this video (${videoId})`);
-    this.name = 'YoutubeTranscriptDisabledError';
-  }
-}
-
-class YoutubeTranscriptNotAvailableError extends YoutubeTranscriptError {
-  constructor(videoId) {
-    super(`No transcripts are available for this video (${videoId})`);
-    this.name = 'YoutubeTranscriptNotAvailableError';
-  }
-}
-
-class YoutubeTranscriptNotAvailableLanguageError extends YoutubeTranscriptError {
-  constructor(lang, availableLangs, videoId) {
-    super(`No transcripts are available in ${lang} this video (${videoId}). Available languages: ${availableLangs.join(', ')}`);
-    this.name = 'YoutubeTranscriptNotAvailableLanguageError';
-  }
-}
-
-/**
- * Class to retrieve transcript if exists
- */
-class YoutubeTranscript {
-  /**
-   * Fetch transcript from YouTube Video
-   * @param {string} videoId - Video url or video identifier
-   * @param {Object} config - Configuration options
-   * @param {string} [config.lang] - Get transcript in a specific language ISO code
-   * @returns {Promise<Array<{text: string, duration: number, offset: number, lang: string}>>}
-   */
-  static async fetchTranscript(videoId, config = {}) {
-    const identifier = this.retrieveVideoId(videoId);
-    const videoPageResponse = await fetch(
-      `https://www.youtube.com/watch?v=${identifier}`,
-      {
-        headers: {
-          ...(config.lang && { 'Accept-Language': config.lang }),
-          'User-Agent': USER_AGENT,
-        },
-      }
-    );
-    
-    if (!videoPageResponse.ok) {
-      if (videoPageResponse.status === 429) {
-        throw new YoutubeTranscriptTooManyRequestError();
-      }
-      throw new YoutubeTranscriptVideoUnavailableError(videoId);
-    }
-    
-    const videoPageBody = await videoPageResponse.text();
-
-    const splittedHTML = videoPageBody.split('"captions":');
-
-    if (splittedHTML.length <= 1) {
-      if (videoPageBody.includes('class="g-recaptcha"')) {
-        throw new YoutubeTranscriptTooManyRequestError();
-      }
-      if (!videoPageBody.includes('"playabilityStatus":')) {
-        throw new YoutubeTranscriptVideoUnavailableError(videoId);
-      }
-      throw new YoutubeTranscriptDisabledError(videoId);
-    }
-
-    let captions;
-    try {
-      captions = JSON.parse(
-        splittedHTML[1].split(',"videoDetails')[0].replace('\n', '')
-      )?.['playerCaptionsTracklistRenderer'];
-    } catch (e) {
-      throw new YoutubeTranscriptDisabledError(videoId);
-    }
-
-    if (!captions) {
-      throw new YoutubeTranscriptDisabledError(videoId);
-    }
-
-    if (!('captionTracks' in captions)) {
-      throw new YoutubeTranscriptNotAvailableError(videoId);
-    }
-
-    if (
-      config.lang &&
-      !captions.captionTracks.some(
-        (track) => track.languageCode === config.lang
-      )
-    ) {
-      throw new YoutubeTranscriptNotAvailableLanguageError(
-        config.lang,
-        captions.captionTracks.map((track) => track.languageCode),
-        videoId
-      );
-    }
-
-    const transcriptTrack = config.lang
-      ? captions.captionTracks.find(
-          (track) => track.languageCode === config.lang
-        )
-      : captions.captionTracks[0];
-    
-    const transcriptURL = transcriptTrack.baseUrl;
-    const languageCode = transcriptTrack.languageCode;
-
-    const transcriptResponse = await fetch(transcriptURL, {
-      headers: {
-        ...(config.lang && { 'Accept-Language': config.lang }),
-        'User-Agent': USER_AGENT,
-      },
-    });
-    
-    if (!transcriptResponse.ok) {
-      throw new YoutubeTranscriptNotAvailableError(videoId);
-    }
-    
-    const transcriptBody = await transcriptResponse.text();
-    const results = Array.from(transcriptBody.matchAll(RE_XML_TRANSCRIPT));
-    
-    return results.map((result) => ({
-      text: result[3],
-      duration: parseFloat(result[2]),
-      offset: parseFloat(result[1]),
-      lang: config.lang ?? languageCode,
-    }));
-  }
-
-  /**
-   * Retrieve video id from url or string
-   * @param {string} videoId - Video url or video id
-   * @returns {string} The extracted video ID
-   */
-  static retrieveVideoId(videoId) {
-    if (videoId.length === 11) {
-      return videoId;
-    }
-    const matchId = videoId.match(RE_YOUTUBE);
-    if (matchId && matchId.length) {
-      return matchId[1];
-    }
-    throw new YoutubeTranscriptError('Impossible to retrieve YouTube video ID.');
-  }
-}
-
-// Export classes and functions to make them available globally
-window.YoutubeTranscript = YoutubeTranscript;
-window.YoutubeTranscriptError = YoutubeTranscriptError;
-window.YoutubeTranscriptTooManyRequestError = YoutubeTranscriptTooManyRequestError;
-window.YoutubeTranscriptVideoUnavailableError = YoutubeTranscriptVideoUnavailableError;
-window.YoutubeTranscriptDisabledError = YoutubeTranscriptDisabledError;
-window.YoutubeTranscriptNotAvailableError = YoutubeTranscriptNotAvailableError;
-window.YoutubeTranscriptNotAvailableLanguageError = YoutubeTranscriptNotAvailableLanguageError;
-```
 
 # manifest.json
 
@@ -667,10 +57,48 @@ window.YoutubeTranscriptNotAvailableLanguageError = YoutubeTranscriptNotAvailabl
   "content_scripts": [
     {
       "matches": ["*://*.youtube.com/watch?*"],
-      "js": ["lib/youtube-transcript.js", "youtube-content.js"]
+      "js": ["youtube-content.bundle.js"]
     }
   ]
 }
+```
+
+# package.json
+
+```json
+{
+  "devDependencies": {
+    "@babel/core": "^7.26.9",
+    "@babel/preset-env": "^7.26.9",
+    "babel-loader": "^10.0.0",
+    "webpack": "^5.98.0",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "youtube-transcript": "^1.2.1"
+  },
+  "scripts": {
+    "build": "webpack",
+    "watch": "webpack --watch"
+  },
+  "name": "ai-youtube-transcript-summarizer",
+  "version": "1.0.0",
+  "main": "webpack.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pbeheyt/AI-YouTube-Transcript-Summarizer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/pbeheyt/AI-YouTube-Transcript-Summarizer/issues"
+  },
+  "homepage": "https://github.com/pbeheyt/AI-YouTube-Transcript-Summarizer#readme",
+  "description": ""
+}
+
 ```
 
 # popup.html
@@ -856,7 +284,431 @@ window.YoutubeTranscriptNotAvailableLanguageError = YoutubeTranscriptNotAvailabl
 </html>
 ```
 
-# popup.js
+# src/background.js
+
+```js
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url) {
+    try {
+      const response = await fetch(chrome.runtime.getURL('config.json'));
+      const config = await response.json();
+      const result = await chrome.storage.local.get(['aiTabId', 'scriptInjected', 'useClaudeAI']);
+      
+      // Debug logs moved after result is defined
+      console.log('Tab updated:', tab.url);
+      console.log('Checking tab:', tabId, 'against aiTabId:', result.aiTabId);
+      console.log('URL includes claude.ai:', tab.url.includes('claude.ai'));
+      
+      if (
+        tabId === result.aiTabId && 
+        !result.scriptInjected && 
+        ((result.useClaudeAI && tab.url.includes('claude.ai')) || 
+         (!result.useClaudeAI && tab.url.includes('chatgpt.com')))
+      ) {
+        console.log('Attempting to inject script:', result.useClaudeAI ? 'claude-content.js' : 'gpt-content.js');
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            files: [result.useClaudeAI ? 'claude-content.js' : 'gpt-content.js']
+          });
+          console.log('✅ Script injection successful');
+          await chrome.storage.local.set({ scriptInjected: true });
+        } catch (error) {
+          console.error('❌ Script injection failed:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  }
+});
+
+chrome.runtime.onInstalled.addListener(async () => {
+  // Initialize default settings if not already set
+  const defaultSettings = {
+    useClaudeAI: true,
+    selectedPromptType: 'academic'
+  };
+  
+  const result = await chrome.storage.local.get(Object.keys(defaultSettings));
+  
+  // Apply default settings for any missing values
+  const settingsToUpdate = {};
+  for (const [key, defaultValue] of Object.entries(defaultSettings)) {
+    if (result[key] === undefined) {
+      settingsToUpdate[key] = defaultValue;
+    }
+  }
+  
+  if (Object.keys(settingsToUpdate).length > 0) {
+    await chrome.storage.local.set(settingsToUpdate);
+  }
+});
+
+// Add context menu for YouTube videos
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: 'summarizeYouTubeVideo',
+    title: 'Summarize this YouTube Video',
+    contexts: ['page'],
+    documentUrlPatterns: ['*://*.youtube.com/watch?*']
+  });
+});
+
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === 'summarizeYouTubeVideo') {
+    try {
+      // Send message to content script to extract transcript
+      chrome.tabs.sendMessage(tab.id, { action: 'extractTranscript' });
+      
+      // Get settings
+      const { useClaudeAI, selectedPromptType } = await chrome.storage.local.get(['useClaudeAI', 'selectedPromptType']);
+      
+      // Get config
+      const response = await fetch(chrome.runtime.getURL('config.json'));
+      const config = await response.json();
+      
+      // Clear previous data but keep settings
+      const currentSettings = await chrome.storage.local.get(['useClaudeAI', 'selectedPromptType']);
+      await chrome.storage.local.clear();
+      await chrome.storage.local.set(currentSettings);
+      
+      // Get URL for selected AI service
+      const aiUrl = useClaudeAI ? config.claudeUrl : config.chatgptUrl;
+      
+      // Get the appropriate prompt based on selected type
+      const prePrompt = config.prompts[selectedPromptType] || config.prompts.academic;
+      
+      // Open AI service in new tab
+      const newTab = await chrome.tabs.create({ url: aiUrl, active: false });
+      
+      // Store necessary data for content script
+      await chrome.storage.local.set({
+        aiTabId: newTab.id,
+        scriptInjected: false,
+        useClaudeAI: useClaudeAI,
+        prePrompt: prePrompt
+      });
+      
+      // Switch to the new tab
+      await chrome.tabs.update(newTab.id, { active: true });
+    } catch (error) {
+      console.error('Error during YouTube summarization:', error);
+    }
+  }
+});
+```
+
+# src/claude-content.js
+
+```js
+(() => {
+  function insertText(text) {
+      let editorElement = document.querySelector('p[data-placeholder="How can Claude help you today?"]');
+      
+      if (!editorElement) {
+          editorElement = document.querySelector('[contenteditable="true"]');
+      }
+      
+      if (!editorElement) {
+          console.error('Claude editor element not found');
+          return false;
+      }
+
+      // Clear existing content
+      editorElement.innerHTML = '';
+      
+      // Split the text into lines and create paragraphs
+      const lines = text.split('\n');
+      lines.forEach((line, index) => {
+          const p = document.createElement('p');
+          p.textContent = line;
+          editorElement.appendChild(p);
+          
+          // Add a line break between paragraphs
+          if (index < lines.length - 1) {
+              editorElement.appendChild(document.createElement('br'));
+          }
+      });
+
+      // Remove empty states
+      editorElement.classList.remove('is-empty', 'is-editor-empty');
+
+      // Trigger input event
+      const inputEvent = new Event('input', { bubbles: true });
+      editorElement.dispatchEvent(inputEvent);
+
+      // Find and click the send button with the new selector
+      setTimeout(() => {
+          // Try multiple possible button selectors
+          const sendButton = 
+              document.querySelector('button[aria-label="Send message"]') ||
+              document.querySelector('button[aria-label="Send Message"]') ||
+              document.querySelector('button svg path[d*="M208.49,120.49"]')?.closest('button');
+
+          if (sendButton) {
+              console.log('Send button found, clicking...');
+              
+              // Ensure the button is enabled
+              sendButton.disabled = false;
+              
+              // Create and dispatch multiple events for better compatibility
+              ['mousedown', 'mouseup', 'click'].forEach(eventType => {
+                  const event = new MouseEvent(eventType, {
+                      view: window,
+                      bubbles: true,
+                      cancelable: true,
+                      buttons: 1
+                  });
+                  sendButton.dispatchEvent(event);
+              });
+          } else {
+              console.error('Send button not found');
+          }
+      }, 1000); // Increased delay to ensure content is properly inserted
+
+      return true;
+  }
+
+  // Format YouTube video data
+  const formatYouTubeData = (data) => {
+      if (data.error) {
+          return `Error: ${data.message || 'Unknown error occurred while extracting YouTube data'}`;
+      }
+      
+      const title = data.videoTitle || 'No title available';
+      const channel = data.channelName || 'Unknown channel';
+      const description = data.videoDescription || 'No description available';
+      const views = data.views || 'Unknown';
+      const date = data.publishDate || 'Unknown date';
+      const transcript = data.transcript || 'No transcript available';
+      
+      return `YouTube Video Information:
+Title: ${title}
+Channel: ${channel}
+Views: ${views}
+Published: ${date}
+
+Description:
+${description}
+
+Transcript:
+${transcript}`;
+  };
+
+  const handleProcess = async () => {
+      try {
+          const result = await chrome.storage.local.get(['prePrompt', 'youtubeVideoData']);
+          
+          console.log('Retrieved data:', result);
+
+          if (!result.prePrompt) {
+              throw new Error('No prePrompt found in storage');
+          }
+
+          if (!result.youtubeVideoData) {
+              throw new Error('YouTube data missing from storage');
+          }
+
+          const youtubeContent = formatYouTubeData(result.youtubeVideoData);
+          const fullText = `${result.prePrompt}\n\n${youtubeContent}`;
+          
+          console.log('Attempting to insert text into Claude...');
+
+          const success = insertText(fullText);
+          
+          if (success) {
+              console.log('Message successfully inserted into Claude');
+          } else {
+              throw new Error('Failed to insert message into Claude');
+          }
+      } catch (error) {
+          console.error('Error in handling Claude process:', error);
+      }
+  };
+
+  // Initialize process when the page is ready
+  const observerConfig = { childList: true, subtree: true };
+  let retryCount = 0;
+  const MAX_RETRIES = 10;
+
+  const observer = new MutationObserver(() => {
+      const editorElement = document.querySelector('p[data-placeholder="How can Claude help you today?"]') || 
+                          document.querySelector('[contenteditable="true"]');
+      
+      if (editorElement) {
+          console.log('Claude editor element found');
+          observer.disconnect();
+          handleProcess();
+      } else {
+          retryCount++;
+          if (retryCount >= MAX_RETRIES) {
+              observer.disconnect();
+              console.error('Failed to find Claude editor element after maximum retries');
+          }
+      }
+  });
+
+  const startObserver = () => {
+      if (document.readyState === 'complete') {
+          observer.observe(document.body, observerConfig);
+      } else {
+          window.addEventListener('load', () => {
+              observer.observe(document.body, observerConfig);
+          });
+      }
+  };
+
+  startObserver();
+})();
+```
+
+# src/gpt-content.js
+
+```js
+(() => {
+  function insertText(text) {
+      const editorDiv = document.querySelector('#prompt-textarea');
+      
+      if (!editorDiv) {
+          console.error('GPT editor div not found');
+          return false;
+      }
+
+      try {
+          // Set value to the text
+          editorDiv.value = text;
+          
+          // Focus the editor
+          editorDiv.focus();
+
+          // Dispatch input event
+          const inputEvent = new Event('input', { bubbles: true });
+          editorDiv.dispatchEvent(inputEvent);
+
+          // Find and click the send button
+          setTimeout(() => {
+              const sendButton = document.querySelector('button[data-testid="send-button"]:not(:disabled)');
+              if (sendButton) {
+                  console.log('Send button found, clicking...');
+                  
+                  // Create and dispatch multiple events for better compatibility
+                  ['mousedown', 'mouseup', 'click'].forEach(eventType => {
+                      const event = new MouseEvent(eventType, {
+                          view: window,
+                          bubbles: true,
+                          cancelable: true,
+                          buttons: 1
+                      });
+                      sendButton.dispatchEvent(event);
+                  });
+              } else {
+                  console.error('Send button not found or disabled');
+              }
+          }, 1000);
+
+          return true;
+      } catch (error) {
+          console.error('Error inserting text:', error);
+          return false;
+      }
+  }
+
+  // Format YouTube video data
+  const formatYouTubeData = (data) => {
+      if (data.error) {
+          return `Error: ${data.message || 'Unknown error occurred while extracting YouTube data'}`;
+      }
+      
+      const title = data.videoTitle || 'No title available';
+      const channel = data.channelName || 'Unknown channel';
+      const description = data.videoDescription || 'No description available';
+      const views = data.views || 'Unknown';
+      const date = data.publishDate || 'Unknown date';
+      const transcript = data.transcript || 'No transcript available';
+      
+      return `YouTube Video Information:
+Title: ${title}
+Channel: ${channel}
+Views: ${views}
+Published: ${date}
+
+Description:
+${description}
+
+Transcript:
+${transcript}`;
+  };
+
+  const handleProcess = async () => {
+      try {
+          // Get both prePrompt and YouTube data in a single storage call
+          const result = await chrome.storage.local.get(['prePrompt', 'youtubeVideoData']);
+          
+          console.log('Retrieved data for GPT:', result);
+
+          if (!result.prePrompt) {
+              throw new Error('No prePrompt found in storage');
+          }
+
+          if (!result.youtubeVideoData) {
+              throw new Error('YouTube data missing from storage');
+          }
+
+          const youtubeContent = formatYouTubeData(result.youtubeVideoData);
+          const fullText = `${result.prePrompt}\n\n${youtubeContent}`;
+          
+          console.log('Attempting to insert text into GPT...');
+
+          const success = insertText(fullText);
+          
+          if (success) {
+              console.log('Message successfully inserted into GPT');
+          } else {
+              throw new Error('Failed to insert message into GPT');
+          }
+      } catch (error) {
+          console.error('Error in handling GPT process:', error);
+      }
+  };
+
+  // Initialize process when the page is ready
+  const observerConfig = { childList: true, subtree: true };
+  let retryCount = 0;
+  const MAX_RETRIES = 10;
+
+  const observer = new MutationObserver(() => {
+      const editorDiv = document.querySelector('#prompt-textarea');
+      
+      if (editorDiv) {
+          console.log('GPT editor div found');
+          observer.disconnect();
+          handleProcess();
+      } else {
+          retryCount++;
+          if (retryCount >= MAX_RETRIES) {
+              observer.disconnect();
+              console.error('Failed to find GPT editor div after maximum retries');
+          }
+      }
+  });
+
+  const startObserver = () => {
+      if (document.readyState === 'complete') {
+          observer.observe(document.body, observerConfig);
+      } else {
+          window.addEventListener('load', () => {
+              observer.observe(document.body, observerConfig);
+          });
+      }
+  };
+
+  startObserver();
+})();
+```
+
+# src/popup.js
 
 ```js
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1004,183 +856,216 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 ```
 
-# youtube-content.js
+# src/youtube-content.js
 
 ```js
-(() => {
-  /**
-   * Extracts YouTube video information and transcript
-   * Uses YoutubeTranscript library for reliable transcript extraction
-   */
-  
-  // Extract video title
-  const extractVideoTitle = () => {
-    const titleElement = document.querySelector('h1.ytd-watch-metadata');
-    return titleElement ? titleElement.textContent.trim() : 'Title not found';
-  };
-  
-  // Extract video creator/channel name
-  const extractChannelName = () => {
-    const channelElement = document.querySelector('ytd-channel-name yt-formatted-string#text');
-    return channelElement ? channelElement.textContent.trim() : 'Channel not found';
-  };
-  
-  // Extract video description
-  const extractVideoDescription = () => {
-    const descriptionElement = document.querySelector('ytd-text-inline-expander > yt-formatted-string');
-    return descriptionElement ? descriptionElement.textContent.trim() : 'Description not available';
-  };
+// Import the YoutubeTranscript library from npm package
+import { YoutubeTranscript } from 'youtube-transcript';
 
-  // Extract video metadata (views, date)
-  const extractVideoMetadata = () => {
-    const metadataElement = document.querySelector('#info-container ytd-video-primary-info-renderer #info');
-    if (!metadataElement) return { views: 'Unknown', date: 'Unknown' };
+/**
+ * YouTube Content Script for extracting video information and transcript
+ * Uses the youtube-transcript npm package for reliable transcript extraction
+ */
+
+// Extract video title
+const extractVideoTitle = () => {
+  const titleElement = document.querySelector('h1.ytd-watch-metadata');
+  return titleElement ? titleElement.textContent.trim() : 'Title not found';
+};
+
+// Extract video creator/channel name
+const extractChannelName = () => {
+  const channelElement = document.querySelector('ytd-channel-name yt-formatted-string#text');
+  return channelElement ? channelElement.textContent.trim() : 'Channel not found';
+};
+
+// Extract video description
+const extractVideoDescription = () => {
+  const descriptionElement = document.querySelector('ytd-text-inline-expander > yt-formatted-string');
+  return descriptionElement ? descriptionElement.textContent.trim() : 'Description not available';
+};
+
+// Extract video metadata (views, date)
+const extractVideoMetadata = () => {
+  const metadataElement = document.querySelector('#info-container ytd-video-primary-info-renderer #info');
+  if (!metadataElement) return { views: 'Unknown', date: 'Unknown' };
+  
+  const infoText = metadataElement.textContent.trim();
+  
+  // Try to extract views and date with regex
+  const viewsMatch = infoText.match(/(\d+,?\d*)\s+views?/i);
+  const dateMatch = infoText.match(/([A-Za-z]+\s+\d+,?\s*\d*)/);
+  
+  return {
+    views: viewsMatch ? viewsMatch[1] : 'Unknown',
+    date: dateMatch ? dateMatch[1] : 'Unknown'
+  };
+};
+
+// Format transcript data into readable text
+const formatTranscript = (transcriptData) => {
+  if (!Array.isArray(transcriptData) || transcriptData.length === 0) {
+    return 'No transcript data available';
+  }
+  
+  // Format each transcript segment
+  return transcriptData.map(segment => {
+    // Convert offset seconds to MM:SS format
+    const minutes = Math.floor(segment.offset / 60);
+    const seconds = Math.floor(segment.offset % 60);
+    const timestamp = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     
-    const infoText = metadataElement.textContent.trim();
+    return `[${timestamp}] ${segment.text}`;
+  }).join('\n\n');
+};
+
+// Main function to extract all video data
+const extractVideoData = async () => {
+  try {
+    // Extract basic video metadata
+    const title = extractVideoTitle();
+    const channel = extractChannelName();
+    const description = extractVideoDescription();
+    const metadata = extractVideoMetadata();
     
-    // Try to extract views and date with regex
-    const viewsMatch = infoText.match(/(\d+,?\d*)\s+views?/i);
-    const dateMatch = infoText.match(/([A-Za-z]+\s+\d+,?\s*\d*)/);
+    // Get the current video URL
+    const videoUrl = window.location.href;
     
+    console.log('Extracting transcript from URL:', videoUrl);
+    
+    // Extract transcript using the npm package - this is the key part that uses the package
+    const transcriptData = await YoutubeTranscript.fetchTranscript(videoUrl);
+    const formattedTranscript = formatTranscript(transcriptData);
+    
+    console.log('Transcript data extracted:', transcriptData.length, 'segments');
+    
+    // Return the complete video data object
     return {
-      views: viewsMatch ? viewsMatch[1] : 'Unknown',
-      date: dateMatch ? dateMatch[1] : 'Unknown'
+      videoTitle: title,
+      channelName: channel,
+      videoDescription: description,
+      views: metadata.views,
+      publishDate: metadata.date,
+      transcript: formattedTranscript,
+      transcriptLanguage: transcriptData.length > 0 ? transcriptData[0].lang : 'unknown'
     };
-  };
-  
-  // Format transcript data into readable text
-  const formatTranscript = (transcriptData) => {
-    if (!Array.isArray(transcriptData) || transcriptData.length === 0) {
-      return 'No transcript data available';
+  } catch (error) {
+    console.error('Error extracting video data:', error);
+    
+    // Determine error type and provide appropriate message
+    let errorMessage = 'Failed to extract transcript';
+    
+    if (error.message && error.message.includes('Transcript is disabled')) {
+      errorMessage = 'Transcript is not available for this video. The creator may have disabled it.';
+    } else if (error.message && error.message.includes('No transcript available')) {
+      errorMessage = 'No transcript is available for this video.';
+    } else if (error.message && error.message.includes('too many requests')) {
+      errorMessage = 'YouTube is limiting transcript access due to too many requests. Please try again later.';
+    } else if (error.message && error.message.includes('unavailable')) {
+      errorMessage = 'The video appears to be unavailable or private.';
+    } else {
+      errorMessage = `Error getting transcript: ${error.message}`;
     }
     
-    // Format each transcript segment
-    return transcriptData.map(segment => {
-      // Convert offset seconds to MM:SS format
-      const minutes = Math.floor(segment.offset / 60);
-      const seconds = Math.floor(segment.offset % 60);
-      const timestamp = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-      
-      return `[${timestamp}] ${segment.text}`;
-    }).join('\n\n');
-  };
-  
-  // Main function to extract all video data
-  const extractVideoData = async () => {
-    try {
-      // Extract basic video metadata
-      const title = extractVideoTitle();
-      const channel = extractChannelName();
-      const description = extractVideoDescription();
-      const metadata = extractVideoMetadata();
-      
-      // Get the current video URL
-      const videoUrl = window.location.href;
-      
-      // Extract transcript using the library
-      const transcriptData = await window.YoutubeTranscript.fetchTranscript(videoUrl);
-      const formattedTranscript = formatTranscript(transcriptData);
-      
-      // Return the complete video data object
-      return {
-        videoTitle: title,
-        channelName: channel,
-        videoDescription: description,
-        views: metadata.views,
-        publishDate: metadata.date,
-        transcript: formattedTranscript,
-        transcriptLanguage: transcriptData.length > 0 ? transcriptData[0].lang : 'unknown'
-      };
-    } catch (error) {
-      console.error('Error extracting video data:', error);
-      
-      // Determine error type and provide appropriate message
-      let errorMessage = 'Failed to extract transcript';
-      
-      if (error instanceof window.YoutubeTranscriptDisabledError) {
-        errorMessage = 'Transcript is not available for this video. The creator may have disabled it.';
-      } else if (error instanceof window.YoutubeTranscriptNotAvailableError) {
-        errorMessage = 'No transcript is available for this video.';
-      } else if (error instanceof window.YoutubeTranscriptTooManyRequestError) {
-        errorMessage = 'YouTube is limiting transcript access due to too many requests. Please try again later.';
-      } else if (error instanceof window.YoutubeTranscriptVideoUnavailableError) {
-        errorMessage = 'The video appears to be unavailable or private.';
-      } else {
-        errorMessage = `Error getting transcript: ${error.message}`;
-      }
-      
-      // Return what we could get, with error message for transcript
-      return {
-        videoTitle: extractVideoTitle(),
-        channelName: extractChannelName(),
-        videoDescription: extractVideoDescription(),
-        views: extractVideoMetadata().views,
-        publishDate: extractVideoMetadata().date,
-        transcript: errorMessage,
-        error: true,
-        message: errorMessage
-      };
-    }
-  };
-  
-  // Handle messages from popup and background scripts
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'extractTranscript') {
-      // Start the extraction process
-      extractAndSaveVideoData();
-      sendResponse({ status: 'Extracting transcript...' });
-      return true; // Keep the message channel open for async response
-    }
-  });
-  
-  // Function to extract and save video data
-  const extractAndSaveVideoData = async () => {
-    try {
-      // Wait for the page to be fully loaded if needed
-      if (document.readyState !== 'complete') {
-        await new Promise(resolve => {
-          window.addEventListener('load', resolve);
-        });
-      }
-      
-      // Give a moment for YouTube's dynamic content to load if needed
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Extract all video data
-      const videoData = await extractVideoData();
-      
-      // Save to Chrome storage
-      chrome.storage.local.set({ youtubeVideoData: videoData }, () => {
-        console.log('YouTube video data saved to storage:', videoData);
-      });
-    } catch (error) {
-      console.error('Error in YouTube content script:', error);
-      
-      // Save error message to storage
-      chrome.storage.local.set({ 
-        youtubeVideoData: {
-          error: true,
-          message: error.message || 'Unknown error occurred'
-        }
-      });
-    }
+    // Return what we could get, with error message for transcript
+    return {
+      videoTitle: extractVideoTitle(),
+      channelName: extractChannelName(),
+      videoDescription: extractVideoDescription(),
+      views: extractVideoMetadata().views,
+      publishDate: extractVideoMetadata().date,
+      transcript: errorMessage,
+      error: true,
+      message: errorMessage
+    };
+  }
+};
 
-    chrome.storage.local.get(['youtubeVideoData'], function(result) {
-      console.log('VERIFICATION - Stored data:', result.youtubeVideoData);
-      // Log if transcript was found
-      if (result.youtubeVideoData && result.youtubeVideoData.transcript) {
-        console.log('✅ Transcript successfully extracted');
-      } else {
-        console.log('❌ Transcript extraction failed');
+// Handle messages from popup and background scripts
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'extractTranscript') {
+    // Start the extraction process
+    extractAndSaveVideoData();
+    sendResponse({ status: 'Extracting transcript...' });
+    return true; // Keep the message channel open for async response
+  }
+});
+
+// Function to extract and save video data
+const extractAndSaveVideoData = async () => {
+  try {
+    // Wait for the page to be fully loaded if needed
+    if (document.readyState !== 'complete') {
+      await new Promise(resolve => {
+        window.addEventListener('load', resolve);
+      });
+    }
+    
+    // Give a moment for YouTube's dynamic content to load if needed
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    console.log('Starting video data extraction...');
+    
+    // Extract all video data
+    const videoData = await extractVideoData();
+    
+    // Save to Chrome storage
+    chrome.storage.local.set({ youtubeVideoData: videoData }, () => {
+      console.log('YouTube video data saved to storage:', videoData);
+    });
+  } catch (error) {
+    console.error('Error in YouTube content script:', error);
+    
+    // Save error message to storage
+    chrome.storage.local.set({ 
+      youtubeVideoData: {
+        error: true,
+        message: error.message || 'Unknown error occurred'
       }
     });
-  };
-  
-  // Automatically extract transcript when the page loads (for context menu functionality)
-  if (window.location.href.includes('youtube.com/watch')) {
-    // Wait a bit for the page to stabilize
-    setTimeout(extractAndSaveVideoData, 1500);
   }
-})();
+
+  // Verify storage
+  chrome.storage.local.get(['youtubeVideoData'], function(result) {
+    console.log('VERIFICATION - Stored data:', result.youtubeVideoData);
+    // Log if transcript was found
+    if (result.youtubeVideoData && result.youtubeVideoData.transcript) {
+      console.log('✅ Transcript successfully extracted');
+    } else {
+      console.log('❌ Transcript extraction failed');
+    }
+  });
+};
+
+// Log when content script loads
+console.log('YouTube transcript extractor content script loaded');
+
+// Automatically extract transcript when the page loads (for context menu functionality)
+if (window.location.href.includes('youtube.com/watch')) {
+  console.log('YouTube video page detected, preparing for transcript extraction');
+  // Wait a bit for the page to stabilize
+  setTimeout(extractAndSaveVideoData, 1500);
+}
+```
+
+# webpack.config.js
+
+```js
+const path = require('path');
+
+module.exports = {
+  entry: {
+    background: './background.js',
+    'youtube-content': './youtube-content.js',
+    'claude-content': './claude-content.js',
+    'gpt-content': './gpt-content.js',
+    popup: './popup.js'
+  },
+  output: {
+    filename: '[name].bundle.js',
+    path: path.resolve(__dirname, 'dist')
+  },
+  mode: 'production' // or 'development' for debugging
+};
 ```
 

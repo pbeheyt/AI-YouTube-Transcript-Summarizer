@@ -14,7 +14,7 @@
     "https://claude.ai/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "dist/background.bundle.js"
   },
   "action": {
     "default_popup": "popup.html",
@@ -28,7 +28,13 @@
   "content_scripts": [
     {
       "matches": ["*://*.youtube.com/watch?*"],
-      "js": ["lib/youtube-transcript.js", "youtube-content.js"]
+      "js": ["dist/youtube-content.bundle.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["config.json", "dist/*.bundle.js"],
+      "matches": ["<all_urls>"]
     }
   ]
 }
