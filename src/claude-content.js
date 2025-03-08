@@ -77,15 +77,31 @@
         const description = data.videoDescription || 'No description available';
         const transcript = data.transcript || 'No transcript available';
         
+        // Format comments
+        let commentsSection = '';
+        if (data.comments && Array.isArray(data.comments)) {
+            if (data.comments.length > 0) {
+                commentsSection = `\nTop Comments:\n`;
+                data.comments.forEach((comment, index) => {
+                    commentsSection += `${index + 1}. ${comment.author}: "${comment.text}"${comment.likes ? ` (${comment.likes} likes)` : ''}\n`;
+                });
+            } else {
+                commentsSection = `\nComments: No comments available or comments are disabled for this video.\n`;
+            }
+        } else if (typeof data.comments === 'string') {
+            commentsSection = `\nComments: ${data.comments}\n`;
+        }
+        
         return `YouTube Video Information:
-  Title: ${title}
-  Channel: ${channel}
+Title: ${title}
+Channel: ${channel}
   
-  Description:
-  ${description}
+Description:
+${description}
   
-  Transcript:
-  ${transcript}`;
+Transcript:
+${transcript}
+${commentsSection}`;
     };
   
     const handleProcess = async () => {

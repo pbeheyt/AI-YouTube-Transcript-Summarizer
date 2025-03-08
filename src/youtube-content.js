@@ -47,6 +47,67 @@ const formatTranscript = (transcriptData) => {
     .replace(/\s+/g, ' '); // Replace multiple spaces with a single space
 };
 
+// Extract YouTube comments 
+const extractComments = () => {
+  try {
+    console.log('Extracting comments...');
+    
+    // Get all comment elements
+    const commentElements = document.querySelectorAll('ytd-comment-thread-renderer');
+    
+    if (!commentElements || commentElements.length === 0) {
+      console.log('No comments found or comments not loaded yet');
+      return 'No comments available. Comments might be disabled for this video or not loaded yet.';
+    }
+    
+    console.log(`Found ${commentElements.length} comments`);
+    
+    // Extract data from each comment (limit to top 20 comments to avoid performance issues)
+    const maxComments = 20;
+    const comments = [];
+    
+    for (let i = 0; i < Math.min(commentElements.length, maxComments); i++) {
+      const commentElement = commentElements[i];
+      
+      // Extract author name
+      const authorElement = commentElement.querySelector('#author-text');
+      const author = authorElement ? authorElement.textContent.trim() : 'Unknown user';
+      
+      // Extract comment text - using the structure provided in the HTML snippet
+      const contentTextElement = commentElement.querySelector('#content-text, yt-attributed-string[id="content-text"]');
+      let commentText = 'Comment text not found';
+      
+      if (contentTextElement) {
+        // Get all text spans
+        const textSpans = contentTextElement.querySelectorAll('span.yt-core-attributed-string');
+        if (textSpans && textSpans.length > 0) {
+          commentText = Array.from(textSpans)
+            .map(span => span.textContent.trim())
+            .join(' ');
+        } else {
+          // Fallback - try to get text directly
+          commentText = contentTextElement.textContent.trim();
+        }
+      }
+      
+      // Extract likes if available
+      const likeCountElement = commentElement.querySelector('#vote-count-middle');
+      const likes = likeCountElement ? likeCountElement.textContent.trim() : '0';
+      
+      comments.push({
+        author,
+        text: commentText,
+        likes
+      });
+    }
+    
+    return comments;
+  } catch (error) {
+    console.error('Error extracting comments:', error);
+    return `Error extracting comments: ${error.message}`;
+  }
+};
+
 // Main function to extract all video data
 const extractVideoData = async () => {
   try {
@@ -73,6 +134,11 @@ const extractVideoData = async () => {
     
     console.log('Transcript data extracted:', transcriptData.length, 'segments');
     
+    // Extract comments
+    console.log('Starting comment extraction...');
+    const comments = extractComments();
+    console.log('Comment extraction complete, found:', Array.isArray(comments) ? comments.length : 'error');
+    
     // Return the complete video data object
     return {
       videoId: videoId, // Include the video ID for verification
@@ -80,6 +146,7 @@ const extractVideoData = async () => {
       channelName: channel,
       videoDescription: description,
       transcript: formattedTranscript,
+      comments: comments, // Add the comments to the data structure
       transcriptLanguage: transcriptData.length > 0 ? transcriptData[0].lang : 'unknown',
       extractedAt: new Date().toISOString() // Add timestamp for debugging
     };
@@ -108,6 +175,7 @@ const extractVideoData = async () => {
       channelName: extractChannelName(),
       videoDescription: extractVideoDescription(),
       transcript: errorMessage,
+      comments: extractComments(), // Still try to extract comments
       error: true,
       message: errorMessage,
       extractedAt: new Date().toISOString() // Add timestamp for debugging
@@ -147,7 +215,7 @@ const extractAndSaveVideoData = async () => {
     }
     
     // Give a moment for YouTube's dynamic content to load if needed
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
     console.log('Starting video data extraction...');
     
@@ -180,6 +248,12 @@ const extractAndSaveVideoData = async () => {
       console.log('✅ Transcript successfully extracted');
     } else {
       console.log('❌ Transcript extraction failed');
+    }
+    // Log if comments were found
+    if (result.youtubeVideoData && Array.isArray(result.youtubeVideoData.comments)) {
+      console.log('✅ Comments successfully extracted:', result.youtubeVideoData.comments.length);
+    } else {
+      console.log('❌ Comment extraction failed or no comments found');
     }
   });
 };
