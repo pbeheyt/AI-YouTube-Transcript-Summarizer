@@ -3,9 +3,9 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     try {
       const response = await fetch(chrome.runtime.getURL('config.json'));
       const config = await response.json();
-      const result = await chrome.storage.local.get(['aiTabId', 'scriptInjected', 'useClaudeAI']);
+      const result = await chrome.storage.local.get(['aiTabId', 'scriptInjected']);
       
-      // Debug logs moved after result is defined
+      // Debug logs
       console.log('Tab updated:', tab.url);
       console.log('Checking tab:', tabId, 'against aiTabId:', result.aiTabId);
       console.log('URL includes claude.ai:', tab.url.includes('claude.ai'));
@@ -13,11 +13,10 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       if (
         tabId === result.aiTabId && 
         !result.scriptInjected && 
-        ((result.useClaudeAI && tab.url.includes('claude.ai')) || 
-         (!result.useClaudeAI && tab.url.includes('chatgpt.com')))
+        tab.url.includes('claude.ai')
       ) {
-        // Use the bundled versions from the dist directory
-        const scriptToInject = result.useClaudeAI ? 'dist/claude-content.bundle.js' : 'dist/gpt-content.bundle.js';
+        // Use the bundled Claude content script
+        const scriptToInject = 'dist/claude-content.bundle.js';
         console.log('Attempting to inject script:', scriptToInject);
         
         try {
@@ -40,7 +39,6 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 chrome.runtime.onInstalled.addListener(async () => {
   // Initialize default settings if not already set
   const defaultSettings = {
-    useClaudeAI: true,
     selectedPromptType: 'academic'
   };
   
@@ -59,11 +57,59 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
 });
 
+// Helper function to check if a content script is loaded
+const isContentScriptLoaded = async (tabId) => {
+  return new Promise((resolve) => {
+    try {
+      chrome.tabs.sendMessage(tabId, { action: 'ping' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.log('Content script not ready:', chrome.runtime.lastError);
+          resolve(false);
+        } else {
+          console.log('Content script is ready, received:', response);
+          resolve(true);
+        }
+      });
+    } catch (error) {
+      console.error('Error checking content script:', error);
+      resolve(false);
+    }
+  });
+};
+
+// Helper function to inject content script if needed
+const injectContentScriptIfNeeded = async (tabId) => {
+  try {
+    console.log('Checking if content script is loaded in tab', tabId);
+    
+    // Check if content script is already loaded
+    const isLoaded = await isContentScriptLoaded(tabId);
+    
+    if (!isLoaded) {
+      console.log('Content script not loaded, injecting...');
+      await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: ['dist/youtube-content.bundle.js']
+      });
+      
+      // Wait a moment for script to initialize
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return true;
+    } else {
+      console.log('Content script already loaded');
+      return true;
+    }
+  } catch (error) {
+    console.error('Error injecting content script:', error);
+    return false;
+  }
+};
+
 // Add context menu for YouTube videos
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: 'summarizeYouTubeVideo',
-    title: 'Summarize this YouTube Video',
+    title: 'Summarize this YouTube Video with Claude',
     contexts: ['page'],
     documentUrlPatterns: ['*://*.youtube.com/watch?*']
   });
@@ -73,40 +119,81 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'summarizeYouTubeVideo') {
     try {
+      // Make sure content script is loaded
+      const injected = await injectContentScriptIfNeeded(tab.id);
+      
+      if (!injected) {
+        console.error('Failed to inject content script');
+        return;
+      }
+      
+      // Clear any previous transcript data first
+      const settingsToKeep = await chrome.storage.local.get(['selectedPromptType']);
+      
+      // Clear all storage
+      await chrome.storage.local.clear();
+      
+      // Restore just the settings
+      await chrome.storage.local.set(settingsToKeep);
+      
+      console.log('Cleared previous data, preserved settings:', settingsToKeep);
+      
       // Send message to content script to extract transcript
-      chrome.tabs.sendMessage(tab.id, { action: 'extractTranscript' });
+      chrome.tabs.sendMessage(tab.id, { action: 'extractTranscript' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error sending message to content script:', chrome.runtime.lastError);
+          return;
+        }
+        console.log('Extract transcript command sent, response:', response);
+      });
       
       // Get settings
-      const { useClaudeAI, selectedPromptType } = await chrome.storage.local.get(['useClaudeAI', 'selectedPromptType']);
+      const { selectedPromptType } = settingsToKeep;
       
       // Get config
       const response = await fetch(chrome.runtime.getURL('config.json'));
       const config = await response.json();
       
-      // Clear previous data but keep settings
-      const currentSettings = await chrome.storage.local.get(['useClaudeAI', 'selectedPromptType']);
-      await chrome.storage.local.clear();
-      await chrome.storage.local.set(currentSettings);
-      
-      // Get URL for selected AI service
-      const aiUrl = useClaudeAI ? config.claudeUrl : config.chatgptUrl;
+      // Always use Claude URL
+      const aiUrl = config.claudeUrl;
       
       // Get the appropriate prompt based on selected type
       const prePrompt = config.prompts[selectedPromptType] || config.prompts.academic;
       
-      // Open AI service in new tab
-      const newTab = await chrome.tabs.create({ url: aiUrl, active: false });
+      // Wait for transcript extraction (with timeout)
+      let extractionSuccess = false;
+      let retryCount = 0;
+      const MAX_RETRIES = 15;
       
-      // Store necessary data for content script
-      await chrome.storage.local.set({
-        aiTabId: newTab.id,
-        scriptInjected: false,
-        useClaudeAI: useClaudeAI,
-        prePrompt: prePrompt
-      });
+      while (!extractionSuccess && retryCount < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const { youtubeVideoData } = await chrome.storage.local.get(['youtubeVideoData']);
+        
+        if (youtubeVideoData) {
+          extractionSuccess = true;
+          
+          // Open Claude in new tab
+          const newTab = await chrome.tabs.create({ url: aiUrl, active: false });
+          
+          // Store necessary data for content script
+          await chrome.storage.local.set({
+            aiTabId: newTab.id,
+            scriptInjected: false,
+            prePrompt: prePrompt
+          });
+          
+          // Switch to the new tab
+          await chrome.tabs.update(newTab.id, { active: true });
+          break;
+        } else {
+          retryCount++;
+        }
+      }
       
-      // Switch to the new tab
-      await chrome.tabs.update(newTab.id, { active: true });
+      if (!extractionSuccess) {
+        console.error('Failed to extract transcript after multiple attempts');
+      }
     } catch (error) {
       console.error('Error during YouTube summarization:', error);
     }

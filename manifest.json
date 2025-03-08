@@ -1,16 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "AI YouTube Transcript Summarizer",
+  "name": "YouTube Transcript Summarizer for Claude",
   "version": "1.0",
   "permissions": [
     "contextMenus",
     "activeTab",
     "scripting",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "https://*.youtube.com/*",
-    "https://chatgpt.com//*",
     "https://claude.ai/*"
   ],
   "background": {

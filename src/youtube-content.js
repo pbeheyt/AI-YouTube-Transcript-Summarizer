@@ -6,6 +6,9 @@ const { YoutubeTranscript } = require('youtube-transcript');
  * Uses the youtube-transcript npm package for reliable transcript extraction
  */
 
+// Flag to indicate script is fully loaded
+let contentScriptReady = false;
+
 // Extract video title
 const extractVideoTitle = () => {
   const titleElement = document.querySelector('h1.ytd-watch-metadata');
@@ -41,21 +44,16 @@ const extractVideoMetadata = () => {
   };
 };
 
-// Format transcript data into readable text
+// Format transcript data into a continuous text without timestamps
 const formatTranscript = (transcriptData) => {
   if (!Array.isArray(transcriptData) || transcriptData.length === 0) {
     return 'No transcript data available';
   }
   
-  // Format each transcript segment
-  return transcriptData.map(segment => {
-    // Convert offset seconds to MM:SS format
-    const minutes = Math.floor(segment.offset / 60);
-    const seconds = Math.floor(segment.offset % 60);
-    const timestamp = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    
-    return `[${timestamp}] ${segment.text}`;
-  }).join('\n\n');
+  // Concatenate all text segments with spaces, removing timestamps
+  return transcriptData.map(segment => segment.text.trim())
+    .join(' ')
+    .replace(/\s+/g, ' '); // Replace multiple spaces with a single space
 };
 
 // Main function to extract all video data
@@ -67,26 +65,35 @@ const extractVideoData = async () => {
     const description = extractVideoDescription();
     const metadata = extractVideoMetadata();
     
-    // Get the current video URL
-    const videoUrl = window.location.href;
+    // Get the current video URL with any parameters
+    const fullVideoUrl = window.location.href;
     
-    console.log('Extracting transcript from URL:', videoUrl);
+    // Extract just the video ID for consistent identification
+    const videoId = new URLSearchParams(window.location.search).get('v');
+    
+    console.log('Extracting transcript for video ID:', videoId);
+    console.log('From URL:', fullVideoUrl);
+    
+    // Clear any existing transcript data first
+    await clearExistingTranscriptData();
     
     // Extract transcript using the npm package - this is the key part that uses the package
-    const transcriptData = await YoutubeTranscript.fetchTranscript(videoUrl);
+    const transcriptData = await YoutubeTranscript.fetchTranscript(fullVideoUrl);
     const formattedTranscript = formatTranscript(transcriptData);
     
     console.log('Transcript data extracted:', transcriptData.length, 'segments');
     
     // Return the complete video data object
     return {
+      videoId: videoId, // Include the video ID for verification
       videoTitle: title,
       channelName: channel,
       videoDescription: description,
       views: metadata.views,
       publishDate: metadata.date,
       transcript: formattedTranscript,
-      transcriptLanguage: transcriptData.length > 0 ? transcriptData[0].lang : 'unknown'
+      transcriptLanguage: transcriptData.length > 0 ? transcriptData[0].lang : 'unknown',
+      extractedAt: new Date().toISOString() // Add timestamp for debugging
     };
   } catch (error) {
     console.error('Error extracting video data:', error);
@@ -108,6 +115,7 @@ const extractVideoData = async () => {
     
     // Return what we could get, with error message for transcript
     return {
+      videoId: new URLSearchParams(window.location.search).get('v'),
       videoTitle: extractVideoTitle(),
       channelName: extractChannelName(),
       videoDescription: extractVideoDescription(),
@@ -115,20 +123,32 @@ const extractVideoData = async () => {
       publishDate: extractVideoMetadata().date,
       transcript: errorMessage,
       error: true,
-      message: errorMessage
+      message: errorMessage,
+      extractedAt: new Date().toISOString() // Add timestamp for debugging
     };
   }
 };
 
-// Handle messages from popup and background scripts
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'extractTranscript') {
-    // Start the extraction process
-    extractAndSaveVideoData();
-    sendResponse({ status: 'Extracting transcript...' });
-    return true; // Keep the message channel open for async response
-  }
-});
+// Function to clear existing transcript data 
+const clearExistingTranscriptData = async () => {
+  return new Promise((resolve) => {
+    // Get and log existing data for debugging
+    chrome.storage.local.get(['youtubeVideoData'], (result) => {
+      if (result.youtubeVideoData) {
+        console.log('Clearing existing transcript data:', 
+          result.youtubeVideoData.videoId || 'Unknown ID');
+      } else {
+        console.log('No existing transcript data found');
+      }
+      
+      // Remove specifically the youtubeVideoData object
+      chrome.storage.local.remove('youtubeVideoData', () => {
+        console.log('Existing transcript data cleared');
+        resolve();
+      });
+    });
+  });
+};
 
 // Function to extract and save video data
 const extractAndSaveVideoData = async () => {
@@ -150,7 +170,8 @@ const extractAndSaveVideoData = async () => {
     
     // Save to Chrome storage
     chrome.storage.local.set({ youtubeVideoData: videoData }, () => {
-      console.log('YouTube video data saved to storage:', videoData);
+      console.log('YouTube video data saved to storage for video:', videoData.videoId);
+      console.log('Data extraction timestamp:', videoData.extractedAt);
     });
   } catch (error) {
     console.error('Error in YouTube content script:', error);
@@ -159,7 +180,8 @@ const extractAndSaveVideoData = async () => {
     chrome.storage.local.set({ 
       youtubeVideoData: {
         error: true,
-        message: error.message || 'Unknown error occurred'
+        message: error.message || 'Unknown error occurred',
+        extractedAt: new Date().toISOString()
       }
     });
   }
@@ -176,12 +198,48 @@ const extractAndSaveVideoData = async () => {
   });
 };
 
+// Handle messages from popup and background scripts
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log('Message received in content script:', message);
+  
+  // Respond to ping messages to verify content script is loaded
+  if (message.action === 'ping') {
+    console.log('Ping received, responding with pong');
+    sendResponse({ status: 'pong', ready: contentScriptReady });
+    return true; // Keep the message channel open for async response
+  }
+  
+  if (message.action === 'extractTranscript') {
+    console.log('Extract transcript request received');
+    // Start the extraction process
+    extractAndSaveVideoData();
+    sendResponse({ status: 'Extracting transcript...' });
+    return true; // Keep the message channel open for async response
+  }
+});
+
+// Initialize and mark as ready when loaded
+const initialize = async () => {
+  try {
+    console.log('YouTube transcript extractor content script initializing...');
+    
+    // Mark script as ready
+    contentScriptReady = true;
+    console.log('YouTube transcript extractor content script ready');
+    
+    // If on a YouTube video page, pre-extract the transcript
+    if (window.location.href.includes('youtube.com/watch')) {
+      console.log('YouTube video page detected, preparing for transcript extraction');
+      // Wait a bit for the page to stabilize
+      setTimeout(extractAndSaveVideoData, 1500);
+    }
+  } catch (error) {
+    console.error('Error initializing content script:', error);
+  }
+};
+
 // Log when content script loads
 console.log('YouTube transcript extractor content script loaded');
 
-// Automatically extract transcript when the page loads (for context menu functionality)
-if (window.location.href.includes('youtube.com/watch')) {
-  console.log('YouTube video page detected, preparing for transcript extraction');
-  // Wait a bit for the page to stabilize
-  setTimeout(extractAndSaveVideoData, 1500);
-}
+// Initialize the content script
+initialize();

@@ -5,7 +5,6 @@ module.exports = {
     background: './src/background.js',
     'youtube-content': './src/youtube-content.js',
     'claude-content': './src/claude-content.js',
-    'gpt-content': './src/gpt-content.js',
     popup: './src/popup.js'
   },
   output: {
