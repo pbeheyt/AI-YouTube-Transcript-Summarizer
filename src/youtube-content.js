@@ -17,8 +17,16 @@ const extractVideoTitle = () => {
 
 // Extract video creator/channel name
 const extractChannelName = () => {
-  const channelElement = document.querySelector('ytd-channel-name yt-formatted-string#text');
-  return channelElement ? channelElement.textContent.trim() : 'Channel not found';
+  // Updated selector to find channel name in the correct location
+  const channelElement = document.querySelector('#header-text #title.ytd-video-description-infocards-section-renderer');
+  
+  // Fallback to original selector if the new one doesn't work
+  if (!channelElement) {
+    const originalChannelElement = document.querySelector('ytd-channel-name yt-formatted-string#text');
+    return originalChannelElement ? originalChannelElement.textContent.trim() : 'Channel not found';
+  }
+  
+  return channelElement.textContent.trim();
 };
 
 // Extract video description
