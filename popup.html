@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI YouTube Transcript Summarizer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@500&display=swap');
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #1a1a1b, #2a2a2b);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #ffffff;
+    }
+
+    .container {
+      background-color: #3c3c3c;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      width: 280px;
+    }
+
+    .title {
+      font-size: 16px;
+      margin-bottom: 15px;
+      color: #ff0000;
+    }
+
+    .toggle-container {
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+      margin: 0 10px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #2196F3;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #9C27B0;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+
+    .label {
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .prompt-select-container {
+      margin-bottom: 15px;
+      text-align: left;
+    }
+
+    .prompt-select-label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+
+    .prompt-select {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 5px;
+      background-color: #2a2a2b;
+      color: white;
+      border: 1px solid #555;
+      font-size: 14px;
+      appearance: none;
+    }
+
+    .prompt-select:focus {
+      outline: none;
+      border-color: #9C27B0;
+    }
+
+    button {
+      background: #ff0000;
+      color: #ffffff;
+      padding: 12px 10px;
+      font-size: 14px;
+      font-weight: bold;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      white-space: normal;
+    }
+
+    button:hover {
+      background: #cc0000;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .status-message {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="title">YouTube Transcript Summarizer</h1>
+    
+    <div class="toggle-container">
+      <span class="label" style="opacity: 0.7;">GPT</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="aiToggle" checked>
+        <span class="slider"></span>
+      </label>
+      <span class="label" style="font-weight: bold;">Claude</span>
+    </div>
+    
+    <div class="prompt-select-container">
+      <label for="promptType" class="prompt-select-label">Summary Type:</label>
+      <select id="promptType" class="prompt-select">
+        <option value="academic">Academic Analysis</option>
+        <option value="shortSummary">Quick Summary</option>
+        <option value="detailedSummary">Detailed Analysis</option>
+      </select>
+    </div>
+    
+    <button type="button" id="summarizeBtn">Summarize This Video</button>
+    
+    <div id="statusMessage" class="status-message"></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
