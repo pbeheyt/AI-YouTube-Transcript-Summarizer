@@ -11,7 +11,8 @@ module.exports = {
     filename: '[name].bundle.js',
     path: path.resolve(__dirname, 'dist')
   },
-  mode: 'production', // or 'development' for debugging
+  mode: 'production',
+  devtool: 'source-map',
   module: {
     rules: [
       {
@@ -22,10 +23,11 @@ module.exports = {
           options: {
             presets: [
               ['@babel/preset-env', {
-                modules: false,
                 targets: {
                   chrome: "88"
-                }
+                },
+                useBuiltIns: "usage",
+                corejs: 3
               }]
             ]
           }
@@ -34,6 +36,20 @@ module.exports = {
     ]
   },
   resolve: {
-    extensions: ['.js']
+    extensions: ['.js'],
+    modules: [
+      'node_modules',
+      path.resolve(__dirname, 'src')
+    ],
+    fallback: {
+      "path": false,
+      "fs": false
+    }
+  },
+  optimization: {
+    minimize: true
+  },
+  performance: {
+    hints: false
   }
 };

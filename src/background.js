@@ -1,8 +1,9 @@
+// Import promptStorage module
+const promptStorage = require('./promptStorage');
+
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url) {
     try {
-      const response = await fetch(chrome.runtime.getURL('config.json'));
-      const config = await response.json();
       const result = await chrome.storage.local.get(['aiTabId', 'scriptInjected']);
       
       // Debug logs
@@ -37,23 +38,25 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 });
 
 chrome.runtime.onInstalled.addListener(async () => {
-  // Initialize default settings if not already set
-  const defaultSettings = {
-    selectedPromptType: 'academic'
-  };
-  
-  const result = await chrome.storage.local.get(Object.keys(defaultSettings));
-  
-  // Apply default settings for any missing values
-  const settingsToUpdate = {};
-  for (const [key, defaultValue] of Object.entries(defaultSettings)) {
-    if (result[key] === undefined) {
-      settingsToUpdate[key] = defaultValue;
+  try {
+    // Initialize default settings and prompts if not already set
+    const { customPrompts, selectedPromptType } = await chrome.storage.local.get(['customPrompts', 'selectedPromptType']);
+    
+    // Initialize prompts using the promptStorage module
+    if (!customPrompts || Object.keys(customPrompts).length === 0) {
+      console.log('Initializing default prompts...');
+      await promptStorage.savePrompts(promptStorage.DEFAULT_PROMPTS);
     }
-  }
-  
-  if (Object.keys(settingsToUpdate).length > 0) {
-    await chrome.storage.local.set(settingsToUpdate);
+    
+    if (!selectedPromptType) {
+      console.log('Setting default prompt type...');
+      await chrome.storage.local.set({ selectedPromptType: 'academic' });
+    }
+    
+    console.log('Extension initialized with prompts:', 
+      customPrompts ? Object.keys(customPrompts).length : 'None');
+  } catch (error) {
+    console.error('Error during initialization:', error);
   }
 });
 
@@ -115,6 +118,23 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
+// Helper function to get prompt content
+async function getPromptContent(promptType) {
+  try {
+    const prompts = await promptStorage.loadPrompts();
+    
+    if (!prompts[promptType]) {
+      console.warn(`Prompt type "${promptType}" not found, using default`);
+      return prompts.academic?.content || promptStorage.DEFAULT_PROMPTS.academic.content;
+    }
+    
+    return prompts[promptType].content;
+  } catch (error) {
+    console.error('Error getting prompt content:', error);
+    return promptStorage.DEFAULT_PROMPTS.academic.content;
+  }
+}
+
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'summarizeYouTubeVideo') {
@@ -127,8 +147,17 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         return;
       }
       
-      // Clear any previous transcript data first
-      const settingsToKeep = await chrome.storage.local.get(['selectedPromptType']);
+      // Get stored prompt settings
+      const { selectedPromptType, customPrompts } = await chrome.storage.local.get([
+        'selectedPromptType', 
+        'customPrompts'
+      ]);
+      
+      // Clear previous transcript data but keep settings
+      const settingsToKeep = { 
+        selectedPromptType, 
+        customPrompts 
+      };
       
       // Clear all storage
       await chrome.storage.local.clear();
@@ -136,7 +165,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       // Restore just the settings
       await chrome.storage.local.set(settingsToKeep);
       
-      console.log('Cleared previous data, preserved settings:', settingsToKeep);
+      console.log('Cleared previous data, preserved settings for prompt type:', selectedPromptType);
       
       // Send message to content script to extract transcript
       chrome.tabs.sendMessage(tab.id, { action: 'extractTranscript' }, (response) => {
@@ -146,19 +175,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         }
         console.log('Extract transcript command sent, response:', response);
       });
-      
-      // Get settings
-      const { selectedPromptType } = settingsToKeep;
-      
-      // Get config
-      const response = await fetch(chrome.runtime.getURL('config.json'));
-      const config = await response.json();
-      
-      // Always use Claude URL
-      const aiUrl = config.claudeUrl;
-      
-      // Get the appropriate prompt based on selected type
-      const prePrompt = config.prompts[selectedPromptType] || config.prompts.academic;
       
       // Wait for transcript extraction (with timeout)
       let extractionSuccess = false;
@@ -173,8 +189,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         if (youtubeVideoData) {
           extractionSuccess = true;
           
+          // Get the prompt content based on selected type
+          const promptType = selectedPromptType || 'academic';
+          const prePrompt = await getPromptContent(promptType);
+          
           // Open Claude in new tab
-          const newTab = await chrome.tabs.create({ url: aiUrl, active: false });
+          const newTab = await chrome.tabs.create({ url: 'https://claude.ai/new', active: false });
           
           // Store necessary data for content script
           await chrome.storage.local.set({
